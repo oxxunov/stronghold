@@ -49,6 +49,12 @@ export function initHud(camera, map) {
     bSpeed.classList.toggle('on', state.speed > 1);
   };
 
+  const bMarks = $('b-marks');
+  if (bMarks) bMarks.onclick = () => {
+    state.showMarks = !state.showMarks;
+    bMarks.classList.toggle('on', state.showMarks);
+  };
+
   bGrid.onclick = () => {
     state.showGrid = !state.showGrid;
     bGrid.classList.toggle('on', state.showGrid);
@@ -132,6 +138,14 @@ export function updateHud(dtReal) {
   fe.textContent = ff > 0 ? `+${ff} радость` : (ff < 0 ? `${ff} страх` : '0');
   fe.className = ff > 0 ? 'ok' : (ff < 0 ? 'bad' : '');
   $('rate').textContent = workRate().toFixed(2);
+
+  const rr = window.SH && window.SH.renderer;
+  const dn = $('drawn');
+  if (dn && rr) {
+    dn.textContent = `${rr.statDrawn || 0}/${rr.statInView || 0}`
+      + (rr.statFailed ? ` (сбой ${rr.statFailed})` : '');
+    dn.className = rr.statFailed ? 'bad' : '';
+  }
 
   // состояние пака мечника — видно сразу, грузится он или нет
   const sw = window.SH && window.SH.renderer ? window.SH.renderer.swordsman : null;

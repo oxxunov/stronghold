@@ -191,6 +191,11 @@ export class Renderer {
     const list = this.drawList;
     list.length = 0;
 
+    // диагностика: сколько сущностей попало в кадр и сколько реально нарисовано
+    this.statInView = 0;
+    this.statDrawn = 0;
+    this.statFailed = 0;
+
     const padX = 4 * T, padY = 5 * T;
 
     for (const d of this.map.decor) {
@@ -201,6 +206,7 @@ export class Renderer {
     for (const e of state.entities) {
       const wx = e.x * T, wy = e.y * T;
       if (wx < tl.x - padX || wx > br.x + padX || wy < tl.y - padY || wy > br.y + padY) continue;
+      this.statInView++;
       list.push(e);
     }
     // стены: каждая клетка со стеной — отдельный объект сортировки
@@ -223,6 +229,16 @@ export class Renderer {
     }
 
     list.sort((a, b) => (a.sortY !== undefined ? a.sortY : a.y) - (b.sortY !== undefined ? b.sortY : b.y));
+
+    // режим меток: ставим точку под каждой сущностью независимо от спрайта.
+    // Есть точки, но нет фигур — виноват спрайт. Нет точек — сущности не в кадре.
+    if (state.showMarks) {
+      ctx.fillStyle = '#ff40c0';
+      for (const e of state.entities) {
+        const p = cam.worldToScreen((e.x + 0.5) * T, (e.y + 1) * T);
+        ctx.fillRect(p.x - 2, p.y - 2, 5, 5);
+      }
+    }
 
     for (const o of list) {
       if (o.wall) {

@@ -58,6 +58,7 @@ export const state = {
 
   // --- Отладка ---
   showGrid: false,
+  showMarks: false,
 };
 
 export function addEntity(e) {
