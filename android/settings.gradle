@@ -1,3 +1,5 @@
+// Порядок блоков важен: Gradle разрешает перед plugins {} только
+// pluginManagement {} и buildscript {}. Всё остальное — строго после.
 pluginManagement {
     repositories {
         google()
@@ -5,17 +7,17 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
     }
-}
-plugins {
-    // версия плагина объявлена здесь, а не в подпроекте:
-    // иначе Gradle ругается на повторное объявление на classpath
-    id 'com.android.application' version '8.5.2' apply false
 }
 
 rootProject.name = "Stronghold"
