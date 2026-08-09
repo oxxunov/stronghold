@@ -23,8 +23,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Собрать сайт без исходников обёртки
+        run: |
+          mkdir -p _site
+          rsync -a --exclude '_site/' --exclude 'android/' --exclude 'tools/' \
+                   --exclude '.git/' --exclude '.github/' ./ _site/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
       - id: deployment
         uses: actions/deploy-pages@v4

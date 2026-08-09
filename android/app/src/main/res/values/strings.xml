@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Stronghold</string>
+    <string name="exit_confirm">Выйти из игры?</string>
+    <string name="yes">Выйти</string>
+    <string name="no">Остаться</string>
+</resources>

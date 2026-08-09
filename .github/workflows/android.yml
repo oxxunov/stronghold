@@ -1,0 +1,53 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      # игра лежит в корне репозитория; кладём её в assets/www,
+      # исключая всё, что в приложении не нужно
+      - name: Собрать веб-файлы в assets
+        run: |
+          mkdir -p android/app/src/main/assets/www
+          rsync -a \
+            --exclude 'android/' \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'tools/' \
+            --exclude '*.md' \
+            --exclude '*.zip' \
+            ./ android/app/src/main/assets/www/
+          du -sh android/app/src/main/assets/www
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Сборка debug APK
+        working-directory: android
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Переименовать по версии
+        run: |
+          cd android/app/build/outputs/apk/debug
+          mv app-debug.apk stronghold-${{ github.run_number }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stronghold-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
