@@ -221,9 +221,14 @@ export function place(map, def, tx, ty) {
   for (const [res, amount] of Object.entries(def.cost || {}))
     state.resources[res] -= amount;
 
+  const hp = def.hp || Math.round(60 * w * h
+    + (def.cost?.stone || 0) * 6 + (def.cost?.wood || 0) * 2);
+
   const b = {
     id: state.nextId++,
     def,
+    hp,
+    maxHp: hp,
     x: tx, y: ty,
     w, h,
     // якорь сортировки по глубине — нижняя грань пятна застройки
@@ -247,6 +252,20 @@ export function demolish(map, b) {
   const i = state.buildings.indexOf(b);
   if (i >= 0) state.buildings.splice(i, 1);
   events.emit('demolished', b);
+}
+
+/** Урон по зданию. Разрушено — сносится вместе с рабочими. */
+export function damageBuilding(map, b, amount) {
+  b.hp = Math.max(0, (b.hp || 0) - amount);
+  if (b.hp > 0) return false;
+
+  // рабочие погибают вместе со зданием
+  for (let i = state.entities.length - 1; i >= 0; i--) {
+    if (state.entities[i].home === b) state.entities.splice(i, 1);
+  }
+  demolish(map, b);
+  events.emit('buildingDestroyed', { building: b });
+  return true;
 }
 
 /** Здание под клеткой, если есть */

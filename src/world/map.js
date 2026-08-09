@@ -59,6 +59,8 @@ export class GameMap {
     this.walls = new Uint8Array(w * h);     // 0 нет, 1 частокол, 2 камень
     this.passable = new Uint8Array(w * h);  // клетка занята зданием, но проходима (ворота)
     this.moat = new Uint8Array(w * h);      // 0 нет, 1 сухой ров, 2 смоляной
+    this.wallHp = new Uint16Array(w * h);   // прочность стены в клетке
+    this.crossing = new Uint8Array(w * h);  // лестница или мостик: через стену можно перелезть
     this.decor = [];
     this.stumps = [];
     this.generate(seed);
@@ -81,7 +83,9 @@ export class GameMap {
    */
   moveCost(x, y) {
     if (!this.inBounds(x, y)) return 1;
-    const m = this.moat[this.idx(x, y)];
+    const i = this.idx(x, y);
+    if (this.walls[i] && this.crossing[i]) return 6;   // перелезать долго
+    const m = this.moat[i];
     return m === 1 ? 4 : (m === 2 ? 3 : 1);
   }
 
@@ -89,7 +93,7 @@ export class GameMap {
   walkable(x, y) {
     if (!this.inBounds(x, y)) return false;
     const i = this.idx(x, y);
-    if (this.walls[i]) return false;        // стена перекрывает проход
+    if (this.walls[i] && !this.crossing[i]) return false;   // стена, если нет переправы
     if (this.occupied[i] && !this.passable[i]) return false;
     return terrainById(this.tiles[i]).walk;
   }

@@ -4,7 +4,8 @@
 import { CONFIG } from '../config.js';
 import { state } from '../core/state.js';
 import { terrainById } from '../world/map.js';
-import { UnitSheet, ObjectSet, BuildingSprites, AnimalSheets, WallSheet, loadImage, TREES, ROCKS, BUSHES } from './sprites.js';
+import { UnitSheet, ObjectSet, BuildingSprites, AnimalSheets, WallSheet, EngineSheet, loadImage, TREES, ROCKS, BUSHES } from './sprites.js';
+import { ENGINES } from '../military/siege.js';
 import { WALL_TYPES, wallMask } from '../world/walls.js';
 import { MOAT_TYPES, moatMask } from '../world/moat.js';
 import { isSelected } from '../military/orders.js';
@@ -35,6 +36,7 @@ export class Renderer {
     // мечник — готовый пак: 16 направлений и свои анимации
     this.swordsman = new ActorSheet('./assets/sprites/swordsman');
     this.moatSheet = loadImage('./assets/sprites/moat.png').img;
+    this.engineSheet = new EngineSheet();
 
     // атлас местности: строка = тип, столбец = вариант
     const atlasRec = loadImage('./assets/sprites/terrain2.png');
@@ -227,6 +229,14 @@ export class Renderer {
         const p = cam.worldToScreen(o.x * T, (o.y + 1) * T);
         this.wallSheet.draw(ctx, WALL_TYPES[o.wall].row, wallMask(this.map, o.x, o.y),
                             p.x, p.y, cam.zoom);
+        // побитая стена темнеет — видно, где сейчас проломят
+        const i = this.map.idx(o.x, o.y);
+        const full = WALL_TYPES[o.wall].hp;
+        const left = this.map.wallHp[i] / full;
+        if (left < 0.95) {
+          ctx.fillStyle = `rgba(30,22,16,${(1 - left) * 0.55})`;
+          ctx.fillRect(p.x, p.y - 48 * cam.zoom, T * cam.zoom, 48 * cam.zoom);
+        }
       } else if (o.def) {
         // здание
         const p = cam.worldToScreen(o.x * T, (o.y + o.h) * T);
@@ -241,6 +251,16 @@ export class Renderer {
           ctx.fillRect(cx - s2 / 2, p.y - s2 * 3.2, s2, s2);
           ctx.fillStyle = '#f2e8d6';
           ctx.fillRect(cx - 1, p.y - s2 * 3.2 + 2, 2, s2 - 4);
+        }
+      } else if (o.type === 'engine') {
+        const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
+        const p = cam.worldToScreen(cx, foot);
+        this.engineSheet.draw(ctx, ENGINES[o.engine].row, o.frame | 0, p.x, p.y, cam.zoom);
+        if (o.aim) {                       // метка прицела
+          const a = cam.worldToScreen((o.aim.x + 0.5) * T, (o.aim.y + 0.5) * T);
+          ctx.strokeStyle = 'rgba(230,120,80,0.8)';
+          ctx.lineWidth = Math.max(1, 1.5 * cam.zoom);
+          ctx.beginPath(); ctx.arc(a.x, a.y, 7 * cam.zoom, 0, 6.3); ctx.stroke();
         }
       } else if (o.type === 'enemy') {
         const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
@@ -303,6 +323,15 @@ export class Renderer {
           ctx.fillRect(p.x - bw / 2, by, bw, bh);
           ctx.fillStyle = o.hp / o.maxHp > 0.4 ? '#7cc46a' : '#c0503f';
           ctx.fillRect(p.x - bw / 2, by, bw * (o.hp / o.maxHp), bh);
+        }
+
+        // больного помечаем зелёной точкой над головой
+        if (o.sick > 0) {
+          const s2 = Math.max(2, 4 * cam.zoom);
+          ctx.fillStyle = '#8fbf5a';
+          ctx.beginPath();
+          ctx.arc(p.x + 7 * cam.zoom, p.y - size + 6 * cam.zoom, s2, 0, 6.3);
+          ctx.fill();
         }
 
         // ноша над головой — видно, кто уже несёт ресурс
@@ -395,6 +424,18 @@ Renderer.prototype.drawMoat = function (tl, br) {
     ctx.strokeStyle = 'rgba(240,232,206,0.85)';
     ctx.lineWidth = Math.max(1, 1.5 * cam.zoom);
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+
+  // облака заразы
+  for (const pl of state.plague) {
+    const p = cam.worldToScreen((pl.x + 0.5) * T, (pl.y + 0.5) * T);
+    const r = 2.5 * T * cam.zoom;
+    const a = Math.min(0.35, pl.left / 120 + 0.12);
+    ctx.fillStyle = `rgba(120,150,90,${a})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.3); ctx.fill();
+    ctx.strokeStyle = 'rgba(150,180,110,0.5)';
+    ctx.lineWidth = Math.max(1, cam.zoom);
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.3); ctx.stroke();
   }
 
   // очаги огня поверх рва

@@ -4,8 +4,11 @@
 import { state } from '../core/state.js';
 import { UNITS, canHire, hire, WEAPON_NAME, army, barracks } from '../military/units.js';
 import { selectAll, selectType, clearSelection, orderStand, selection } from '../military/orders.js';
+import { ENGINES, canBuildEngine, buildEngine, guild, loadCow } from '../military/siege.js';
+import { TUNNELLER, canHireTunneller, hireTunneller, tunnelGuild } from '../military/tunnel.js';
 
 const el = {};
+const RES = { wood: 'дерево', stone: 'камень', gold: 'золото' };
 let map = null;
 
 export function initBarracksPanel(_map) {
@@ -74,6 +77,94 @@ function render() {
 
   const have = army();
   el.list.innerHTML = '';
+
+  // осадные машины — отдельным блоком, если построена гильдия
+  if (guild()) {
+    const head = document.createElement('div');
+    head.className = 'mrow';
+    head.innerHTML = '<b style="color:var(--gold)">Осадные машины</b>';
+    el.list.appendChild(head);
+
+    for (const [id, def] of Object.entries(ENGINES)) {
+      const row = document.createElement('div');
+      row.className = 'mrow';
+
+      const label = document.createElement('span');
+      label.className = 'mname';
+      label.textContent = def.name;
+
+      const req = document.createElement('span');
+      req.className = 'mreq';
+      req.textContent = Object.entries(def.cost)
+        .map(([r, n]) => `${RES[r] || r} ${n}`).join(' ') + ` + ${def.crew} чел.`;
+
+      const b = document.createElement('button');
+      const check = canBuildEngine(def);
+      b.textContent = check.ok ? 'Собрать' : check.reason;
+      b.disabled = !check.ok;
+      if (!check.ok) b.classList.add('poor');
+      b.onclick = () => {
+        const r = buildEngine(map, id);
+        note(r.ok ? `${def.name} собрана` : r.reason, !r.ok);
+        render();
+      };
+
+      row.append(label, req, b);
+      el.list.appendChild(row);
+    }
+  }
+
+  // тоннельщики
+  if (tunnelGuild()) {
+    const row = document.createElement('div');
+    row.className = 'mrow';
+    const label = document.createElement('span');
+    label.className = 'mname';
+    const have = state.entities.filter((e) => e.type === 'tunneller').length;
+    label.innerHTML = `${TUNNELLER.name} <i>${have}</i>`;
+    const req = document.createElement('span');
+    req.className = 'mreq';
+    req.textContent = `${TUNNELLER.gold} зол. + 1 чел.`;
+    const b = document.createElement('button');
+    const check = canHireTunneller();
+    b.textContent = check.ok ? 'Нанять' : check.reason;
+    b.disabled = !check.ok;
+    if (!check.ok) b.classList.add('poor');
+    b.onclick = () => {
+      const r = hireTunneller(map);
+      note(r.ok ? 'Тоннельщик готов копать' : r.reason, !r.ok);
+      render();
+    };
+    row.append(label, req, b);
+    el.list.appendChild(row);
+  }
+
+  // зарядить требушеты коровой
+  const trebs = state.entities.filter((e) => e.type === 'engine' && e.engine === 'trebuchet');
+  if (trebs.length) {
+    const row = document.createElement('div');
+    row.className = 'mrow';
+    const label = document.createElement('span');
+    label.className = 'mname';
+    const loaded = trebs.filter((t) => t.ammo === 'cow').length;
+    label.innerHTML = `Дохлая корова <i>${loaded}/${trebs.length}</i>`;
+    const req = document.createElement('span');
+    req.className = 'mreq';
+    req.textContent = 'нужна молочная ферма';
+    const b = document.createElement('button');
+    b.textContent = 'Зарядить';
+    b.onclick = () => {
+      let done = 0, why = '';
+      for (const t of trebs) {
+        const r = loadCow(t);
+        if (r.ok) done++; else why = r.reason;
+      }
+      note(done ? `Заряжено требушетов: ${done}` : why, !done);
+      render();
+    };
+    row.append(label, req, b);
+    el.list.appendChild(row);
+  }
 
   for (const u of Object.values(UNITS)) {
     const row = document.createElement('div');

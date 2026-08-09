@@ -17,6 +17,8 @@ import { initBarracksPanel } from './ui/barrackspanel.js';
 import { loadUnits, updateSoldiers } from './military/units.js';
 import { selection, orderMove, orderPost, clearSelection } from './military/orders.js';
 import { updateCombat } from './military/combat.js';
+import { updateEngines, updateOil, aimAt } from './military/siege.js';
+import { updateTunnellers, updatePlague, orderDig } from './military/tunnel.js';
 import { buildingAt } from './economy/buildings.js';
 import { assignJobs, updateWorkers, regrowForest, growFields } from './economy/workers.js';
 import { populationDay, updateIdlers, housingCap } from './society/population.js';
@@ -58,6 +60,28 @@ canvas.addEventListener('pointerup', (e) => {
     const b = buildingAt(t.x, t.y);
     if (b && b.def.garrison) orderPost(map, b);
     else orderMove(map, t.x, t.y);
+    return;
+  }
+
+  // без выделения тап по стене или зданию наводит машины и тоннельщиков
+  const t = camera.screenToTile(e.clientX, e.clientY);
+  const isWall = map.inBounds(t.x, t.y) && map.walls[map.idx(t.x, t.y)];
+  if (isWall) {
+    let diggers = 0;
+    for (const tu of state.entities) {
+      if (tu.type !== 'tunneller') continue;
+      if (orderDig(map, tu, t.x, t.y)) diggers++;
+    }
+    if (diggers) console.log('[подкоп] копают:', diggers);
+  }
+  if (isWall || buildingAt(t.x, t.y)) {
+    let aimed = 0;
+    for (const en of state.entities) {
+      if (en.type !== 'engine') continue;
+      aimAt(en, t.x, t.y);
+      aimed++;
+    }
+    if (aimed) console.log('[осада] наведено машин:', aimed);
   }
 });
 
@@ -106,6 +130,10 @@ function update(dt) {
   updateAnimals(map, dt, requestPath);
   updateSoldiers(map, dt, requestPath);
   updateCombat(map, dt);
+  updateEngines(map, dt);
+  updateOil(map, dt);
+  updateTunnellers(map, dt);
+  updatePlague(map, dt);
   growFields();
   updateFires(dt);
 

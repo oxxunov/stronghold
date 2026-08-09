@@ -164,3 +164,21 @@ export class WallSheet {
                   Math.round(w), Math.round(hh));
   }
 }
+
+
+/** Осадные машины: строка — тип, столбец — фаза */
+export class EngineSheet {
+  constructor(src = './assets/sprites/engines.png') {
+    const rec = loadImage(src);
+    this.img = rec.img;
+    this.size = 64;
+  }
+
+  draw(ctx, row, frame, cx, footY, zoom) {
+    if (!this.img.complete || !this.img.naturalWidth) return;
+    const S = this.size, size = S * zoom;
+    ctx.drawImage(this.img, frame * S, row * S, S, S,
+                  Math.round(cx - size / 2), Math.round(footY - size),
+                  Math.round(size), Math.round(size));
+  }
+}

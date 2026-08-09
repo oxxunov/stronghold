@@ -10,6 +10,7 @@ import { events } from '../core/events.js';
 import { totalPeople } from './population.js';
 import { foodPopularity } from './food.js';
 import { alePopularity } from './ale.js';
+import { sickCount } from '../military/tunnel.js';
 
 export const TAXES = [
   { id: 'gift3', name: 'Раздача ×3',    gold: -1.6, popularity: 7 },
@@ -55,7 +56,11 @@ export function popularityFactors() {
   const tax = taxById(state.tax).popularity;
   const fear = fearFactor() * 2;                 // −5 → −10, +5 → +10
   const crowding = state.populationCap > 0 && totalPeople() > state.populationCap ? -6 : 0;
-  return { food, ale, tax, fear, crowding, total: food + ale + tax + fear + crowding };
+  // чума: чем больше больных, тем мрачнее народ, до −10
+  const sick = sickCount();
+  const plague = sick ? -Math.min(10, 2 + Math.round(sick / 2)) : 0;
+  return { food, ale, tax, fear, crowding, plague,
+           total: food + ale + tax + fear + crowding + plague };
 }
 
 /** Месячный расчёт: собираем налог и двигаем популярность */

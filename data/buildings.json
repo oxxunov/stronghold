@@ -747,5 +747,64 @@
     ],
     "water": true,
     "desc": "Вода для тушения пожаров."
+  },
+  "engineerguild": {
+    "name": "Гильдия инженеров",
+    "category": "military",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 30,
+      "gold": 20
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Здесь нанимают инженеров и собирают осадные машины."
+  },
+  "oilpot": {
+    "name": "Котёл с маслом",
+    "category": "castle",
+    "size": [
+      1,
+      1
+    ],
+    "cost": {
+      "wood": 5,
+      "iron": 2
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "oil": true,
+    "radius": 2.2,
+    "damage": 70,
+    "reload": 8,
+    "pitchPerShot": 1,
+    "desc": "Ошпаривает всех рядом. Тратит смолу, ставится у ворот."
+  },
+  "tunnelguild": {
+    "name": "Гильдия тоннельщиков",
+    "category": "military",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 25,
+      "gold": 20
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Тоннельщики роют под стену и обрушивают её изнутри."
   }
 }

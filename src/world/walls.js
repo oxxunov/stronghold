@@ -11,8 +11,8 @@ export const WALL_WOOD = 1;
 export const WALL_STONE = 2;
 
 export const WALL_TYPES = {
-  [WALL_WOOD]:  { id: 'palisade', name: 'Частокол',      cost: { wood: 4 },  row: 1 },
-  [WALL_STONE]: { id: 'wall',     name: 'Каменная стена', cost: { stone: 6 }, row: 0 },
+  [WALL_WOOD]:  { id: 'palisade', name: 'Частокол',       cost: { wood: 4 },  row: 1, hp: 120 },
+  [WALL_STONE]: { id: 'wall',     name: 'Каменная стена', cost: { stone: 6 }, row: 0, hp: 400 },
 };
 
 export const wallAt = (map, x, y) =>
@@ -79,7 +79,9 @@ export function placeWalls(map, type, tiles) {
     if (!can) break;
 
     for (const [res, amount] of Object.entries(cost)) state.resources[res] -= amount;
-    map.walls[map.idx(t.x, t.y)] = type;
+    const i = map.idx(t.x, t.y);
+    map.walls[i] = type;
+    map.wallHp[i] = WALL_TYPES[type].hp;
     placed++;
   }
 
@@ -87,11 +89,25 @@ export function placeWalls(map, type, tiles) {
   return placed;
 }
 
+/** Урон по стене. Пробили — клетка становится проходимой. */
+export function damageWall(map, x, y, amount) {
+  if (!map.inBounds(x, y)) return false;
+  const i = map.idx(x, y);
+  if (!map.walls[i]) return false;
+  map.wallHp[i] = Math.max(0, map.wallHp[i] - amount);
+  if (map.wallHp[i] > 0) return false;
+  map.walls[i] = WALL_NONE;
+  map.crossing[i] = 0;
+  events.emit('wallBroken', { x, y });
+  return true;
+}
+
 export function removeWall(map, x, y) {
   if (!map.inBounds(x, y)) return false;
   const i = map.idx(x, y);
   if (!map.walls[i]) return false;
   map.walls[i] = WALL_NONE;
+  map.wallHp[i] = 0;
   events.emit('wallRemoved', { x, y });
   return true;
 }

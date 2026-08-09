@@ -94,7 +94,7 @@ export function hire(map, unit) {
 export function army() {
   const out = {};
   for (const e of state.entities) {
-    if (e.type !== 'soldier' && e.type !== 'enemy') continue;
+    if (e.type !== 'soldier' && e.type !== 'enemy' && e.type !== 'tunneller') continue;
     out[e.unit] = (out[e.unit] || 0) + 1;
   }
   return out;
@@ -107,7 +107,7 @@ export const armySize = () =>
 /** Пока приказов нет, солдаты топчутся у казармы */
 export function updateSoldiers(map, dt, requestPath) {
   for (const e of state.entities) {
-    if (e.type !== 'soldier' && e.type !== 'enemy') continue;
+    if (e.type !== 'soldier' && e.type !== 'enemy' && e.type !== 'tunneller') continue;
 
     if (e.path && e.pathStep < e.path.length) {
       const node = e.path[e.pathStep];
@@ -132,7 +132,8 @@ export function updateSoldiers(map, dt, requestPath) {
     if (e.animState === 'walk') e.animState = 'idle';
 
     // дошёл до места приказа — стоит там, а не бредёт обратно
-    if (e.order === 'move' || e.order === 'post' || e.order === 'fight') continue;
+    if (e.order === 'move' || e.order === 'post' || e.order === 'fight'
+        || e.order === 'dig') continue;
     if (e.type === 'enemy') continue;
 
     e.idle -= dt;

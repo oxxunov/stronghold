@@ -775,6 +775,251 @@ section('6.99. Бой');
   }
 }
 
+// ======================================================= 6.995 Осада
+section('6.995. Прочность и осадные машины');
+{
+  const map = resetState(3131);
+  const Wl = await load('src/world/walls.js');
+  const S = await load('src/military/siege.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  state.resources.stone = 900;
+  state.resources.wood = 900;
+  state.resources.gold = 400;
+
+  // стена держит удары и в какой-то момент падает
+  let wx = 0, wy = 0;
+  for (let y = 6; y < map.h - 6 && !wx; y++)
+    for (let x = 6; x < map.w - 6 && !wx; x++)
+      if (Wl.canPlaceWall(map, x, y).ok) { wx = x; wy = y; }
+  ok(wx > 0, 'на карте нет места под стену');
+  Wl.placeWalls(map, Wl.WALL_STONE, [{ x: wx, y: wy }]);
+  ok(map.wallHp[map.idx(wx, wy)] === Wl.WALL_TYPES[Wl.WALL_STONE].hp,
+     'у стены нет прочности');
+  ok(!map.walkable(wx, wy), 'по целой стене можно пройти');
+
+  Wl.damageWall(map, wx, wy, 100);
+  ok(map.walls[map.idx(wx, wy)] !== 0, 'стена рухнула от одного удара');
+  const broke = Wl.damageWall(map, wx, wy, 1000);
+  ok(broke, 'стена не проломилась при большом уроне');
+  ok(map.walkable(wx, wy), 'после пролома клетка осталась непроходимой');
+
+  // здание тоже имеет прочность и сносится
+  const hovelSpot = spot(map, B.DEFS.hovel, map.w >> 1, (map.h >> 1) + 6, 10);
+  ok(hovelSpot !== null, 'лачуга не встаёт');
+  const hv = B.place(map, B.DEFS.hovel, hovelSpot.x, hovelSpot.y);
+  ok(hv.hp > 0, 'у здания нет прочности');
+  const before = state.buildings.length;
+  B.damageBuilding(map, hv, hv.hp + 10);
+  ok(state.buildings.length === before - 1, 'здание не снеслось при нулевой прочности');
+  ok(map.walkable(hovelSpot.x, hovelSpot.y), 'после разрушения клетки не освободились');
+
+  // машины: без гильдии нельзя
+  ok(!S.canBuildEngine(S.ENGINES.catapult).ok, 'катапульта собирается без гильдии');
+  buildTown(map, ['stockpile', 'granary', 'hovel', 'hovel', 'engineerguild']);
+  state.resources.bread = 300;
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 3; d++) simDay(map);
+
+  const r = S.buildEngine(map, 'catapult');
+  ok(r.ok, 'катапульта не собралась: ' + (r.reason || ''));
+  const cat = state.entities.find((e) => e.type === 'engine');
+  ok(cat && cat.range === S.ENGINES.catapult.range, 'у машины неверная дальность');
+
+  // обстрел стены: за несколько залпов должна рухнуть
+  let tx = 0, ty = 0;
+  for (let r = 3; r <= 8 && !tx; r++)
+    for (let dy = -r; dy <= r && !tx; dy++)
+      for (let dx = -r; dx <= r && !tx; dx++) {
+        const x = Math.round(cat.x) + dx, y = Math.round(cat.y) + dy;
+        if (Math.hypot(dx, dy) <= S.ENGINES.catapult.range
+            && Wl.canPlaceWall(map, x, y).ok) { tx = x; ty = y; }
+      }
+  ok(tx > 0, 'негде поставить мишень в радиусе выстрела');
+  Wl.placeWalls(map, Wl.WALL_STONE, [{ x: tx, y: ty }]);
+  ok(map.walls[map.idx(tx, ty)] !== 0, 'мишень не поставилась');
+  S.aimAt(cat, tx, ty);
+
+  let t = 0;
+  while (map.walls[map.idx(tx, ty)] && t < 200) { S.updateEngines(map, 0.5); t += 0.5; }
+  ok(!map.walls[map.idx(tx, ty)], `стена выдержала ${t} секунд обстрела`);
+  ok(t > 5, 'стена рухнула мгновенно, перезарядка не работает');
+
+  // вне дальности машина не стреляет
+  const far = { x: Math.round(cat.x) + 30, y: Math.round(cat.y) };
+  if (map.inBounds(far.x, far.y)) {
+    Wl.placeWalls(map, Wl.WALL_STONE, [far]);
+    S.aimAt(cat, far.x, far.y);
+    cat.cool = 0;
+    S.updateEngines(map, 1);
+    ok(map.walls[map.idx(far.x, far.y)] !== 0, 'машина попала за пределом дальности');
+  }
+}
+
+// ======================================================= 6.996 Штурм стены
+section('6.996. Лестницы, башня, масло');
+{
+  const map = resetState(7373);
+  const Wl = await load('src/world/walls.js');
+  const S = await load('src/military/siege.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  state.resources.stone = 900; state.resources.wood = 900;
+  state.resources.gold = 400; state.resources.iron = 50;
+  state.resources.pitch = 10;
+  buildTown(map, ['stockpile', 'granary', 'hovel', 'hovel', 'hovel', 'engineerguild']);
+  state.resources.bread = 400;
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 3; d++) simDay(map);
+
+  // стена поперёк: пути нет
+  const cy = 10;
+  const line = [];
+  for (let x = 4; x < map.w - 4; x++) line.push({ x, y: cy });
+  Wl.placeWalls(map, Wl.WALL_STONE, line);
+
+  const a = { x: 20, y: cy - 3 }, bpt = { x: 20, y: cy + 3 };
+  let wallX = 0;
+  for (const c of line) if (map.walls[map.idx(c.x, c.y)]) { wallX = c.x; break; }
+  ok(wallX > 0, 'стена не встала');
+
+  if (map.walkable(a.x, a.y) && map.walkable(bpt.x, bpt.y)) {
+    ok(PF.findPath(map, a.x, a.y, bpt.x, bpt.y) === null, 'стена не перекрыла путь');
+  }
+
+  // лестница делает клетку проходимой
+  const r = S.buildEngine(map, 'ladder');
+  ok(r.ok, 'лестница не собралась: ' + (r.reason || ''));
+  const lad = state.entities.find((e) => e.type === 'engine' && e.engine === 'ladder');
+  lad.x = wallX; lad.y = cy + 1;
+  S.aimAt(lad, wallX, cy);
+  ok(lad.order === 'deploy', 'лестнице отдан приказ обстрела вместо установки');
+  S.updateEngines(map, 0.5);
+
+  ok(map.crossing[map.idx(wallX, cy)] === 1, 'лестница не приставилась');
+  ok(map.walkable(wallX, cy), 'через лестницу нельзя перелезть');
+  ok(map.moveCost(wallX, cy) > 4, 'перелезание через стену слишком дёшево');
+
+  if (map.walkable(a.x, a.y) && map.walkable(bpt.x, bpt.y)) {
+    ok(PF.findPath(map, a.x, a.y, bpt.x, bpt.y) !== null,
+       'после лестницы путь через стену так и не появился');
+  }
+
+  // пролом уносит переправу вместе со стеной
+  Wl.damageWall(map, wallX, cy, 9999);
+  ok(map.crossing[map.idx(wallX, cy)] === 0, 'переправа осталась на снесённой стене');
+
+  // осадная башня кладёт мостик на две клетки
+  let wx2 = 0;
+  for (const c of line) if (map.walls[map.idx(c.x, c.y)] && map.walls[map.idx(c.x + 1, c.y)]) { wx2 = c.x; break; }
+  if (wx2) {
+    const r2 = S.buildEngine(map, 'siegetower');
+    if (r2.ok) {
+      const tw = state.entities.find((e) => e.type === 'engine' && e.engine === 'siegetower');
+      tw.x = wx2; tw.y = cy + 1;
+      S.aimAt(tw, wx2, cy);
+      S.updateEngines(map, 0.5);
+      const spans = map.crossing[map.idx(wx2, cy)] + map.crossing[map.idx(wx2 + 1, cy)];
+      ok(spans === 2, `мостик башни накрыл ${spans} клетки вместо двух`);
+    }
+  }
+
+  // масло ошпаривает врагов и тратит смолу
+  const oilSpot = spot(map, B.DEFS.oilpot, map.w >> 1, (map.h >> 1) + 5, 10);
+  ok(oilSpot !== null, 'котёл негде поставить');
+  if (oilSpot) {
+    const pot = B.place(map, B.DEFS.oilpot, oilSpot.x, oilSpot.y);
+    const foe = U.spawnEnemy(map, 'spearman', oilSpot.x + 1, oilSpot.y + 1);
+    const pitch0 = state.resources.pitch;
+    if (foe) {
+      const hp0 = foe.hp;
+      S.updateOil(map, 1);
+      ok(state.resources.pitch === pitch0 - 1, 'котёл не потратил смолу');
+      ok(!state.entities.includes(foe) || foe.hp < hp0, 'масло не обварило врага');
+      // без смолы котёл молчит
+      state.resources.pitch = 0;
+      const foe2 = U.spawnEnemy(map, 'spearman', oilSpot.x + 1, oilSpot.y + 1);
+      if (foe2) {
+        pot.cool = 0;
+        const hp2 = foe2.hp;
+        S.updateOil(map, 1);
+        ok(foe2.hp === hp2, 'котёл выстрелил без смолы');
+      }
+    }
+  }
+}
+
+// ======================================================= 6.997 Подкоп и чума
+section('6.997. Подкопы и чума');
+{
+  const map = resetState(9191);
+  const Wl = await load('src/world/walls.js');
+  const S = await load('src/military/siege.js');
+  const Tn = await load('src/military/tunnel.js');
+  const Pop2 = await load('src/society/popularity.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  state.resources.stone = 900; state.resources.wood = 900; state.resources.gold = 500;
+  buildTown(map, ['stockpile', 'granary', 'hovel', 'hovel', 'hovel', 'tunnelguild', 'dairy']);
+  state.resources.bread = 400;
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 3; d++) simDay(map);
+
+  // тоннельщик обрушивает стену
+  const r = Tn.hireTunneller(map);
+  ok(r.ok, 'тоннельщик не нанялся: ' + (r.reason || ''));
+  const dig = state.entities.find((e) => e.type === 'tunneller');
+
+  let wx = 0, wy = 0;
+  for (let y = 6; y < map.h - 6 && !wx; y++)
+    for (let x = 6; x < map.w - 6 && !wx; x++)
+      if (Wl.canPlaceWall(map, x, y).ok && Wl.canPlaceWall(map, x + 1, y).ok) { wx = x; wy = y; }
+  Wl.placeWalls(map, Wl.WALL_STONE, [{ x: wx, y: wy }, { x: wx + 1, y: wy }]);
+  ok(map.walls[map.idx(wx, wy)] !== 0, 'мишень для подкопа не встала');
+
+  dig.x = wx; dig.y = wy + 1;
+  ok(Tn.orderDig(map, dig, wx, wy), 'приказ копать не принят');
+  ok(!Tn.orderDig(map, dig, 0, 0), 'приказ копать принят там, где нет стены');
+
+  // копает не мгновенно
+  Tn.updateTunnellers(map, 1);
+  ok(map.walls[map.idx(wx, wy)] !== 0, 'стена рухнула за секунду подкопа');
+  Tn.updateTunnellers(map, Tn.TUNNELLER.digTime);
+  ok(map.walls[map.idx(wx, wy)] === 0, 'подкоп не обрушил стену');
+  ok(map.walkable(wx, wy), 'после обрушения клетка непроходима');
+
+  // чума: облако заражает, больной теряет здоровье
+  const victim = U.spawnEnemy(map, 'spearman', (map.w >> 1) + 6, (map.h >> 1) + 6);
+  ok(victim !== null, 'подопытный не встал');
+  Tn.spawnPlague(victim.x, victim.y);
+  ok(state.plague.length === 1, 'облако заразы не появилось');
+
+  const hp0 = victim.hp;
+  Tn.updatePlague(map, 1);
+  ok(victim.sick > 0, 'враг в облаке не заразился');
+  Tn.updatePlague(map, 3);
+  ok(victim.hp < hp0, 'больной не теряет здоровье');
+
+  ok(Tn.sickCount() >= 1, 'счётчик больных не считает');
+  const f = Pop2.popularityFactors();
+  ok(f.plague < 0, 'чума не портит настроение');
+
+  // облако выдыхается. Новые очаги могут появиться от умерших —
+  // поэтому следим именно за тем облаком, что создали
+  const cloud = state.plague[0];
+  Tn.updatePlague(map, Tn.PLAGUE_LIFE + 1);
+  ok(!state.plague.includes(cloud), 'облако заразы не рассеялось');
+
+  // корова: только требушет и только при молочной ферме
+  buildTown(map, ['engineerguild']);
+  state.resources.wood = 900; state.resources.stone = 900; state.resources.gold = 500;
+  const rb = S.buildEngine(map, 'trebuchet');
+  if (rb.ok) {
+    const treb = state.entities.find((e) => e.type === 'engine' && e.engine === 'trebuchet');
+    ok(S.loadCow(treb).ok, 'требушет не заряжается коровой при молочной ферме');
+    ok(treb.ammo === 'cow', 'заряд не сменился');
+  }
+  const rc = S.buildEngine(map, 'catapult');
+  if (rc.ok) {
+    const cat = state.entities.find((e) => e.type === 'engine' && e.engine === 'catapult');
+    ok(!S.loadCow(cat).ok, 'катапульта зарядилась коровой');
+  }
+}
+
 // ======================================================= 7. Данные
 section('7. Данные зданий');
 {

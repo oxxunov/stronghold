@@ -1186,6 +1186,72 @@ def well():
     return cv.im
 
 
+# ---------------------------------------------------------------- этап 9
+def engineerguild():
+    """Гильдия инженеров: сарай с чертежами, козлы и колесо. 3x3."""
+    def props(cv, W, Hh):
+        # козлы с брусом
+        cv.rect(4, Hh - 24, 5, Hh - 6, mix(WOOD, 0.8))
+        cv.rect(16, Hh - 24, 17, Hh - 6, mix(WOOD, 0.8))
+        cv.rect(2, Hh - 26, 19, Hh - 23, WOOD)
+        # колесо у стены
+        cx, cy = W - 16, Hh - 16
+        cv.d.ellipse([cx - 9, cy - 9, cx + 9, cy + 9], outline=(*mix(WOOD, 0.7), 255), width=2)
+        cv.d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=(*mix(WOOD, 0.9), 255))
+        for i in range(4):
+            import math as _m
+            a2 = _m.radians(i * 45)
+            cv.d.line([cx, cy, cx + int(_m.cos(a2) * 8), cy + int(_m.sin(a2) * 8)],
+                      fill=(*mix(WOOD, 0.8), 255))
+    return _props(house(3, 3, WOOD, 'wood', THATCH, 'thatch', True, 2, False, 61), props)
+
+
+def oilpot():
+    """Котёл с кипящим маслом: жаровня, чан, дым. 1x1."""
+    W, Hh = T, T + 22
+    cv = Canvas(W, Hh)
+    top = Hh - T
+    cv.shadow(6, Hh - 4, W - 5, Hh - 1, 60)
+    # жаровня
+    cv.rect(6, Hh - 12, W - 7, Hh - 4, mix(STONE, 0.86))
+    cv.rect(6, Hh - 12, W - 7, Hh - 11, mix(STONE, 1.12))
+    cv.rect(9, Hh - 10, W - 10, Hh - 7, (206, 108, 40))     # угли
+    cv.rect(11, Hh - 9, W - 12, Hh - 8, (248, 196, 96))
+    # чан
+    cv.d.ellipse([4, top + 2, W - 5, Hh - 10], fill=(*mix(IRON_C, 0.9), 255))
+    cv.d.ellipse([7, top + 5, W - 8, Hh - 13], fill=(*(46, 38, 30), 255))
+    cv.d.ellipse([9, top + 6, W - 10, Hh - 16], fill=(*(126, 96, 46), 255))
+    cv.rect(3, top + 6, 4, top + 10, mix(IRON_C, 1.1))       # дужка
+    cv.rect(W - 5, top + 6, W - 4, top + 10, mix(IRON_C, 1.1))
+    # дым
+    for i in range(4):
+        cv.px(W // 2 - 2 + (i % 3), top - 2 - i * 3, (176, 172, 164))
+        cv.px(W // 2 - 1 + (i % 2), top - 3 - i * 3, (200, 196, 188))
+    cv.outline()
+    return cv.im
+
+
+def tunnelguild():
+    """Гильдия тоннельщиков: вход в штольню, крепь, отвал земли. 3x3."""
+    def props(cv, W, Hh):
+        # вход в штольню
+        cv.rect(6, Hh - 30, 30, Hh - 6, (52, 44, 34))
+        cv.d.ellipse([6, Hh - 36, 30, Hh - 22], fill=(*(52, 44, 34), 255))
+        cv.rect(4, Hh - 32, 8, Hh - 4, mix(WOOD, 0.9))       # крепь
+        cv.rect(28, Hh - 32, 32, Hh - 4, mix(WOOD, 0.9))
+        cv.rect(3, Hh - 36, 33, Hh - 32, WOOD)
+        cv.rect(3, Hh - 36, 33, Hh - 35, mix(WOOD, 1.15))
+        # отвал земли
+        for i in range(9):
+            px = W - 26 + (i % 3) * 6
+            py = Hh - 10 + (i % 2) * 3 - (i // 3) * 4
+            cv.rect(px, py, px + 5, py + 3, (128, 100, 66) if i % 2 else (104, 82, 54))
+        # кирка и лопата у стены
+        cv.rect(W - 8, Hh - 30, W - 7, Hh - 10, mix(WOOD, 0.8))
+        cv.rect(W - 12, Hh - 30, W - 4, Hh - 29, mix(IRON_C, 1.0))
+    return _props(house(3, 3, WOOD, 'wood', THATCH, 'thatch', True, 1, False, 71), props)
+
+
 BUILDINGS = {
     'keep':       ('Донжон',          keep),
     'hovel':      ('Лачуга',          lambda: house(2, 2, PLASTER, 'plaster', THATCH, 'thatch', True, 1, False, 1)),
@@ -1198,6 +1264,7 @@ BUILDINGS = {
     'bakery':     ('Пекарня',         lambda: house(3, 3, PLASTER, 'plaster', TILE_R, 'tile', True, 2, True, 4, storeys=2)),
     'gatehouse':  ('Ворота',          gatehouse),
     'wolfpit':    ('Волчья яма',      wolfpit),
+    'oilpot':     ('Котёл с маслом', oilpot),
     'well':       ('Колодец',         well),
     'watchtower': ('Сторожевая башня', watchtower),
     'roundtower': ('Круглая башня',   roundtower),
@@ -1223,6 +1290,8 @@ BUILDINGS = {
     'armourer':   ('Оружейник',       armourer),
     'tanner':     ('Кожевник',        tanner),
     'armoury':    ('Арсенал',         armoury),
+    'engineerguild': ('Гильдия инженеров', engineerguild),
+    'tunnelguild':   ('Гильдия тоннельщиков', tunnelguild),
     'barracks':   ('Казарма',         lambda: house(4, 3, STONE, 'stone', TILE_R, 'tile', True, 3, False, 7, storeys=2)),
 }
 
