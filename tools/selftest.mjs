@@ -1020,6 +1020,62 @@ section('6.997. Подкопы и чума');
   }
 }
 
+// ======================================================= 6.998 ИИ-лорд
+section('6.998. Вражеский лорд');
+{
+  const map = resetState(4242);
+  const L = await load('src/ai/lord.js');
+  const lords = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/lords.json'), 'utf8'));
+  for (const [id, l] of Object.entries(lords)) l.id = id;
+  Object.assign(L.LORDS, lords);
+
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  const mine = state.buildings[0];
+
+  const lord = L.LORDS.pig;
+  const keep = L.buildEnemyCastle(map, lord);
+  ok(keep !== null, 'вражеский замок не построился');
+  ok(keep.side === 'enemy', 'донжон врага числится нашим');
+  ok(state.lord && state.lord.alive, 'лорд не записан в состояние');
+
+  const dist = Math.hypot(keep.x - mine.x, keep.y - mine.y);
+  ok(dist >= 20, `вражеский замок в ${Math.round(dist)} клетках — слишком близко`);
+
+  const enemyWalls = [];
+  for (let i = 0; i < map.walls.length; i++) if (map.walls[i]) enemyWalls.push(i);
+  ok(enemyWalls.length > 20, `у врага всего ${enemyWalls.length} клеток стен`);
+
+  // чужие здания не попадают в наши склады и наём
+  const St2 = await load('src/economy/storage.js');
+  ok(St2.storeFor('wood') === null, 'вражеский склад принимает наши ресурсы');
+
+  // волна выходит и получает маршрут
+  const sent = L.sendWave(map);
+  ok(sent > 0, 'волна не вышла');
+  ok(sent >= lord.waveStart, `в первой волне ${sent} бойцов вместо ${lord.waveStart}`);
+  const foes = state.entities.filter((e) => e.type === 'enemy');
+  ok(foes.length === sent, 'бойцы волны не появились на карте');
+  ok(foes.every((e) => e.order === 'march'), 'волна не получила приказ идти');
+
+  // следующая волна больше
+  const before = state.lord.wave;
+  const sent2 = L.sendWave(map);
+  ok(state.lord.wave === before + 1, 'счётчик волн не растёт');
+  ok(sent2 >= sent, 'вторая волна не больше первой');
+
+  // таймер отсчитывает и запускает волну сам
+  state.lord.timer = 1;
+  const waves0 = state.lord.wave;
+  L.updateLord(map, 1.5);
+  ok(state.lord.wave === waves0 + 1, 'волна не вышла по таймеру');
+  ok(state.lord.timer > 0, 'таймер до следующей волны не перезапустился');
+
+  // падение донжона лорда прекращает волны
+  B.damageBuilding(map, keep, keep.hp + 1);
+  L.updateLord(map, 1);
+  ok(!state.lord.alive, 'лорд шлёт волны после падения донжона');
+}
+
 // ======================================================= 7. Данные
 section('7. Данные зданий');
 {

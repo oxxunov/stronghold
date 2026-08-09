@@ -21,6 +21,12 @@
     user-select:none;-webkit-user-select:none;overscroll-behavior:none}
   #game{display:block;width:100%;height:100%;touch-action:none}
 
+  /* Экран победы или поражения */
+  #outcome{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(12,11,9,.82);z-index:30;text-align:center;padding:24px}
+  #outcome b{display:block;font-size:30px;color:var(--gold);margin-bottom:10px}
+  #outcome span{font-size:15px;color:var(--parch)}
+
   .panel{position:fixed;background:linear-gradient(180deg,var(--stone-2),#191712);
     border:1px solid var(--iron);border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.6)}
 
@@ -155,6 +161,8 @@
 <body>
 <canvas id="game"></canvas>
 
+<div id="outcome"><div><b id="outcome-title"></b><span id="outcome-text"></span></div></div>
+
 <div id="topbar" class="panel">
   <div class="stat"><span>дерево</span><b id="s-wood">0</b></div>
   <div class="stat"><span>камень</span><b id="s-stone">0</b></div>
@@ -162,6 +170,8 @@
   <div class="stat"><span>народ</span><b id="s-pop">0/0</b></div>
   <div class="stat"><span>еда</span><b id="s-food">0</b></div>
   <div class="stat"><span>народ рад</span><b id="s-pop-mood">50</b></div>
+  <div class="stat"><span>лорд</span><b id="s-lord">—</b></div>
+  <div class="stat"><span>волна</span><b id="s-wave">—</b></div>
   <div class="stat push"><span id="s-month">Январь</span><b id="s-year">1066</b></div>
 </div>
 

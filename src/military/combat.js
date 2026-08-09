@@ -7,6 +7,7 @@
 import { state } from '../core/state.js';
 import { events } from '../core/events.js';
 import { requestPath } from '../world/pathfinding.js';
+import { damageWall } from '../world/walls.js';
 import { effectiveRange } from './orders.js';
 import { demolish } from '../economy/buildings.js';
 import { dirIndex } from '../render/actorsheet.js';
@@ -98,6 +99,18 @@ export function updateCombat(map, dt) {
         demolish(map, b);                  // яма срабатывает один раз
         events.emit('trapSprung', { x: b.x, y: b.y });
         if (e.hp <= 0) continue;
+      }
+    }
+
+    // упёрся в стену — ломает её вместо поиска обхода
+    if (e.breach && e.cool <= 0) {
+      const w = map.walls[map.idx(e.breach.x, e.breach.y)];
+      if (!w) { e.breach = null; }
+      else {
+        e.cool = ATTACK_COOLDOWN;
+        const broke = damageWall(map, e.breach.x, e.breach.y, Math.max(4, e.damage));
+        if (broke) e.breach = null;
+        continue;
       }
     }
 

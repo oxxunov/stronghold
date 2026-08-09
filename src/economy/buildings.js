@@ -43,10 +43,11 @@ export function canAfford(def) {
  * Можно ли поставить здание левым верхним углом в клетку (tx, ty).
  * Возвращает { ok, reason }.
  */
-export function checkPlace(map, def, tx, ty) {
+export function checkPlace(map, def, tx, ty, side = 'player') {
   const [w, h] = def.size;
 
-  if (def.unique && state.buildings.some((b) => b.def.id === def.id))
+  // уникальность считается по стороне: у врага свой донжон, у нас свой
+  if (def.unique && state.buildings.some((b) => b.def.id === def.id && b.side === side))
     return { ok: false, reason: 'Уже построено' };
 
   const allowed = (def.terrain || []).map((n) => TERRAIN_BY_NAME[n]);
@@ -82,7 +83,8 @@ export function checkPlace(map, def, tx, ty) {
   const cut = cutsOff(map, tx, ty, w, h);
   if (cut) return { ok: false, reason: `Отрежет путь: ${cut.def.name}` };
 
-  if (def.needsBuilding && !state.buildings.some((b) => b.def.id === def.needsBuilding)) {
+  if (def.needsBuilding
+      && !state.buildings.some((b) => b.def.id === def.needsBuilding && b.side === side)) {
     const need = DEFS[def.needsBuilding]?.name || def.needsBuilding;
     return { ok: false, reason: `Сначала нужна: ${need}` };
   }
@@ -204,8 +206,8 @@ export function approachOf(map, b, fromX, fromY) {
   return best;
 }
 
-export function place(map, def, tx, ty) {
-  const check = checkPlace(map, def, tx, ty);
+export function place(map, def, tx, ty, side = 'player') {
+  const check = checkPlace(map, def, tx, ty, side);
   if (!check.ok) return null;
 
   const [w, h] = def.size;
@@ -227,6 +229,7 @@ export function place(map, def, tx, ty) {
   const b = {
     id: state.nextId++,
     def,
+    side,
     hp,
     maxHp: hp,
     x: tx, y: ty,

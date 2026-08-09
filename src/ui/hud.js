@@ -14,9 +14,22 @@ import { aleInInns } from '../society/ale.js';
 import { refreshMarket } from './marketpanel.js';
 import { refreshBarracks } from './barrackspanel.js';
 import { armySize } from '../military/units.js';
+import { events } from '../core/events.js';
 
 const $ = (id) => document.getElementById(id);
 let cam = null;
+
+events.on('outcome', ({ result }) => {
+  const box = document.getElementById('outcome');
+  const title = document.getElementById('outcome-title');
+  const text = document.getElementById('outcome-text');
+  if (!box) return;
+  title.textContent = result === 'win' ? 'Замок врага пал' : 'Ваш донжон разрушен';
+  text.textContent = result === 'win'
+    ? 'Лорд разбит. Земли ваши.'
+    : 'Осада окончена. Обновите страницу, чтобы начать заново.';
+  box.style.display = 'flex';
+});
 
 export function initHud(camera, map) {
   cam = camera;
@@ -124,6 +137,12 @@ export function updateHud(dtReal) {
   const sign = f.total > 0 ? '+' : '';
   mood.textContent = `${Math.round(state.popularity)} (${sign}${f.total})`;
   mood.style.color = state.popularity >= 50 ? 'var(--gold)' : 'var(--blood)';
+
+  const L = state.lord;
+  $('s-lord').textContent = L ? L.def.name : '—';
+  $('s-wave').textContent = L && L.alive
+    ? `${L.wave} · ${Math.max(0, Math.ceil(L.timer))}с`
+    : '—';
 
   $('s-year').textContent = state.year;
   $('s-month').textContent = MONTHS[state.month];

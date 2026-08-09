@@ -15,7 +15,7 @@ export function storeFor(res) {
            : (FOOD.includes(res) ? 'granary'
            : (WEAPONS.includes(res) ? 'armoury' : null));
   if (!id) return null;
-  return state.buildings.find((b) => b.def.id === id) || null;
+  return state.buildings.find((b) => b.def.id === id && b.side !== 'enemy') || null;
 }
 
 export function deposit(res, amount) {

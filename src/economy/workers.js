@@ -163,6 +163,7 @@ function fieldTile(map, b) {
 // ------------------------------------------------------------------ наём
 export function assignJobs(map) {
   for (const b of state.buildings) {
+    if (b.side === 'enemy') continue;          // чужие здания нас не касаются
     if (b.def.stages && b.growth === undefined) {
       b.growth = 0; b.growTimer = 0; b.harvestsLeft = 0;
     }

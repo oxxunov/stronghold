@@ -243,6 +243,24 @@ export class Renderer {
         const sprite = o.def.stages ? `${o.def.id}_${o.growth | 0}` : o.def.id;
         this.buildings.draw(ctx, sprite, p.x, p.y, o.w, cam.zoom);
 
+        // чужие постройки подкрашиваем, чтобы не путать со своими
+        if (o.side === 'enemy') {
+          ctx.save();
+          ctx.globalCompositeOperation = 'source-atop';
+          ctx.fillStyle = 'rgba(190,70,60,0.20)';
+          ctx.fillRect(p.x, p.y - o.h * T * cam.zoom * 2, o.w * T * cam.zoom,
+                       o.h * T * cam.zoom * 2);
+          ctx.restore();
+        }
+
+        // повреждённое здание темнеет
+        if (o.hp !== undefined && o.hp < o.maxHp) {
+          const k = 1 - o.hp / o.maxHp;
+          ctx.fillStyle = `rgba(30,22,16,${k * 0.5})`;
+          ctx.fillRect(p.x, p.y - o.h * T * cam.zoom * 1.6,
+                       o.w * T * cam.zoom, o.h * T * cam.zoom * 1.6);
+        }
+
         // здание требует рабочих, но их нет — предупреждаем значком
         if ((o.def.workers || 0) > o.workers) {
           const s2 = Math.max(5, 10 * cam.zoom);

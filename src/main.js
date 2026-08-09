@@ -19,6 +19,7 @@ import { selection, orderMove, orderPost, clearSelection } from './military/orde
 import { updateCombat } from './military/combat.js';
 import { updateEngines, updateOil, aimAt } from './military/siege.js';
 import { updateTunnellers, updatePlague, orderDig } from './military/tunnel.js';
+import { loadLords, LORDS, buildEnemyCastle, updateLord } from './ai/lord.js';
 import { buildingAt } from './economy/buildings.js';
 import { assignJobs, updateWorkers, regrowForest, growFields } from './economy/workers.js';
 import { populationDay, updateIdlers, housingCap } from './society/population.js';
@@ -86,7 +87,7 @@ canvas.addEventListener('pointerup', (e) => {
 });
 
 // --- Загрузка данных, потом старт ---
-Promise.all([loadBuildings(), loadUnits()]).then(() => {
+Promise.all([loadBuildings(), loadUnits(), loadLords()]).then(() => {
   initBuildPanel(map, camera);
   initMarketPanel();
   initBarracksPanel(map);
@@ -104,6 +105,14 @@ Promise.all([loadBuildings(), loadUnits()]).then(() => {
   }
   state.populationCap = housingCap();
   populateAnimals(map);   // дичь на лугах у леса
+
+  // противник: пока выбираем случайного лорда, выбор будет в меню миссий
+  const ids = Object.keys(LORDS);
+  const lord = LORDS[ids[(Math.random() * ids.length) | 0]];
+  if (lord && buildEnemyCastle(map, lord)) {
+    renderer.buildTerrain();     // лорд расчистил площадку, местность изменилась
+    console.log('[лорд]', lord.name, '—', lord.desc);
+  }
 });
 
 /** Ближайшее к точке место, куда здание влезает: обходим кольцами наружу */
@@ -120,6 +129,15 @@ function findSpot(def, cx, cy, maxR) {
   return null;
 }
 
+/** Победа и поражение: чей донжон пал, тот и проиграл */
+function checkOutcome() {
+  if (state.outcome) return;
+  const mine = state.buildings.some((b) => b.def.id === 'keep' && b.side !== 'enemy');
+  const theirs = state.buildings.some((b) => b.def.id === 'keep' && b.side === 'enemy');
+  if (!mine) { state.outcome = 'lose'; events.emit('outcome', { result: 'lose' }); }
+  else if (!theirs && state.lord) { state.outcome = 'win'; events.emit('outcome', { result: 'win' }); }
+}
+
 let jobTimer = 0;
 
 function update(dt) {
@@ -134,6 +152,8 @@ function update(dt) {
   updateOil(map, dt);
   updateTunnellers(map, dt);
   updatePlague(map, dt);
+  updateLord(map, dt);
+  checkOutcome();
   growFields();
   updateFires(dt);
 
