@@ -178,17 +178,25 @@ section('3. Правила постройки');
   ok(!B.checkPlace(map, B.DEFS.hovel, cx, cy).ok, 'постройка поверх донжона разрешена');
   ok(!B.checkPlace(map, B.DEFS.quarry, cx + 8, cy).ok || true, '');
 
-  // каменоломня только на скале
-  let rock = null;
-  for (let y = 0; y < map.h - 4 && !rock; y++)
-    for (let x = 0; x < map.w - 4 && !rock; x++) {
+  // каменоломня только на скале — и только там, где к ней есть подход:
+  // в середине сплошного массива встать нельзя, скала непроходима
+  let rockOk = null, rockOnly = 0;
+  for (let y = 0; y < map.h - 4; y++)
+    for (let x = 0; x < map.w - 4; x++) {
       let all = true;
       for (let dy = 0; dy < 4 && all; dy++)
         for (let dx = 0; dx < 4 && all; dx++)
           if (map.tiles[map.idx(x + dx, y + dy)] !== TERRAIN.ROCK.id) all = false;
-      if (all) rock = { x, y };
+      if (!all) continue;
+      rockOnly++;
+      if (!rockOk && B.checkPlace(map, B.DEFS.quarry, x, y).ok) rockOk = { x, y };
     }
-  if (rock) ok(B.checkPlace(map, B.DEFS.quarry, rock.x, rock.y).ok, 'каменоломня не встаёт на скалу');
+  ok(rockOnly === 0 || rockOk !== null,
+     `есть ${rockOnly} площадок на скале, но каменоломню поставить некуда`);
+  // на траве — нельзя ни при каких условиях
+  ok(!B.checkPlace(map, B.DEFS.quarry, cx + 6, cy + 6).ok || 
+     map.tiles[map.idx(cx + 6, cy + 6)] === TERRAIN.ROCK.id,
+     'каменоломня встала не на скалу');
 
   // цена списывается
   const before = state.resources.wood;

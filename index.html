@@ -27,6 +27,7 @@
   /* Верхняя строка состояния */
   #topbar{top:0;left:0;right:0;height:44px;border-radius:0;border-left:0;border-right:0;border-top:0;
     display:flex;align-items:center;gap:14px;padding:0 12px;
+    overflow-x:auto;scrollbar-width:none;
     padding-top:env(safe-area-inset-top);height:calc(44px + env(safe-area-inset-top));
     font-size:13px;letter-spacing:.3px;z-index:10}
   #topbar b{color:var(--gold);font-weight:600}
@@ -42,6 +43,8 @@
 
   /* Нижняя панель управления */
   .stat.push{margin-left:auto}
+  #topbar::-webkit-scrollbar{display:none}
+  .stat{flex:0 0 auto}
 
   /* Панель строительства */
   #build{left:0;right:0;bottom:60px;bottom:calc(60px + env(safe-area-inset-bottom));

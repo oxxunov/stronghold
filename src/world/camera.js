@@ -45,12 +45,21 @@ export class Camera {
   center() {
     this.x = (this.map.w * CONFIG.TILE) / 2;
     this.y = (this.map.h * CONFIG.TILE) / 2;
-    this.zoom = CONFIG.ZOOM_START;
+    this.zoom = Math.max(CONFIG.ZOOM_START, this.minZoom());
     this.clamp();
   }
 
+  /** Меньше этого зума карта перестаёт закрывать экран и по краям чернота */
+  minZoom() {
+    const mw = this.map.w * CONFIG.TILE;
+    const mh = this.map.h * CONFIG.TILE;
+    const cw = this.canvas.clientWidth || 1;
+    const ch = this.canvas.clientHeight || 1;
+    return Math.max(CONFIG.ZOOM_MIN, cw / mw, ch / mh);
+  }
+
   clamp() {
-    this.zoom = Math.min(CONFIG.ZOOM_MAX, Math.max(CONFIG.ZOOM_MIN, this.zoom));
+    this.zoom = Math.min(CONFIG.ZOOM_MAX, Math.max(this.minZoom(), this.zoom));
     const mw = this.map.w * CONFIG.TILE;
     const mh = this.map.h * CONFIG.TILE;
     const halfW = this.viewW / 2, halfH = this.viewH / 2;
