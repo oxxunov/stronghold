@@ -76,13 +76,6 @@ ROLES = {
         'belt': Ramp((78, 54, 36)),
         'head': 'kettle', 'weapon': 'spear', 'shield': False, 'mail': False,
     },
-    'swordsman': {
-        'name': 'Мечник',
-        'cloth': Ramp((128, 134, 144)), 'legs': Ramp((92, 94, 102)),
-        'boots': Ramp((58, 52, 46)), 'hair': Ramp((70, 48, 30)),
-        'belt': Ramp((76, 52, 34)),
-        'head': 'nasal', 'weapon': 'sword', 'shield': True, 'mail': True,
-    },
 }
 
 

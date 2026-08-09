@@ -110,14 +110,14 @@ for d in decor:
     draw_items.append((sy, d))
 
 random.seed(11)
-roles = ['peasant', 'archer', 'spearman', 'swordsman']
+roles = ['peasant', 'archer', 'spearman']
 dirs = ['down', 'left', 'up', 'right']
 for i in range(22):
     ux, uy = random.randrange(2, cols - 2), random.randrange(2, rows - 2)
     if tiles[((uy + OY) % MH) * MW + ((ux + OX) % MW)] in (2, 3, 5):
         continue
     draw_items.append((uy, {'kind': 'unit', 'x': ux + OX, 'y': uy + OY,
-                            'role': roles[i % 4], 'dir': dirs[i % 4],
+                            'role': roles[i % len(roles)], 'dir': dirs[i % 4],
                             'frame': random.randrange(8)}))
 
 # постройки: донжон в центре и хозяйство вокруг

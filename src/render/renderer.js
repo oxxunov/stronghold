@@ -256,8 +256,9 @@ export class Renderer {
                                 o.animFrame | 0, p.x, p.y, cam.zoom * 2)
           : false;
         if (!drawnFoe) {
-          this.units.draw(ctx, o.role, o.dir, o.frame | 0,
-                          p.x - size / 2, p.y - size, cam.zoom);
+          const ok = this.units.draw(ctx, o.role, o.dir, o.frame | 0,
+                                     p.x - size / 2, p.y - size, cam.zoom);
+          if (ok === false) this.placeholder(ctx, p, cam.zoom, '#c07a70');
         }
         if (o.hp < o.maxHp) {
           const bw = 20 * cam.zoom, bh = Math.max(2, 3 * cam.zoom);
@@ -414,4 +415,11 @@ Renderer.prototype.stepActors = function (dt) {
     if (e.role !== 'swordsman') continue;
     stepAnim(e, this.swordsman, dt);
   }
+};
+
+/** Заглушка на время загрузки атласа: лучше столбик, чем пустое место */
+Renderer.prototype.placeholder = function (ctx, p, zoom, color) {
+  const w = 10 * zoom, h = 26 * zoom;
+  ctx.fillStyle = color;
+  ctx.fillRect(p.x - w / 2, p.y - h, w, h);
 };

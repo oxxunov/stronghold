@@ -22,7 +22,8 @@ export function loadImage(src) {
  * Лист юнитов: units64.png
  * строки — роль × направление (down, left, up, right), столбцы — кадры ходьбы.
  */
-export const UNIT_ROLES = ['peasant', 'archer', 'spearman', 'swordsman'];
+// мечник рисуется отдельным паком (ActorSheet), в этом листе его нет
+export const UNIT_ROLES = ['peasant', 'archer', 'spearman'];
 export const UNIT_DIRS = ['down', 'left', 'up', 'right'];
 
 export class UnitSheet {
@@ -50,10 +51,12 @@ export class UnitSheet {
 
   draw(ctx, role, dir, index, x, y, scale = 1) {
     const f = this.frame(role, dir, index);
-    if (!f || !this.img.complete || !this.img.naturalWidth) return;
+    if (!f) return false;                       // роли нет в этом листе
+    if (!this.img.complete || !this.img.naturalWidth) return true;
     ctx.drawImage(this.img, f.sx, f.sy, f.sw, f.sh,
                   Math.round(x), Math.round(y),
                   Math.round(f.sw * scale), Math.round(f.sh * scale));
+    return true;
   }
 }
 
