@@ -21,14 +21,17 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const isFighter = (e) =>
   e.type === 'soldier' || e.type === 'enemy';
 
-const enemyOf = (e) => (e.type === 'soldier' ? 'enemy' : 'soldier');
+/** Свой или чужой: у машин сторона в поле side, у людей — в типе */
+const sideOf = (e) => e.side || (e.type === 'enemy' ? 'enemy' : 'player');
 
-/** Ближайший противник в радиусе */
+/** Ближайший противник в радиусе. Машины врага тоже цель. */
 export function findFoe(e, radius) {
-  const want = enemyOf(e);
+  const mySide = sideOf(e);
   let best = null, bestD = Infinity;
   for (const o of state.entities) {
-    if (o.type !== want || o.hp <= 0) continue;
+    if (o === e || o.hp <= 0) continue;
+    if (o.type !== 'soldier' && o.type !== 'enemy' && o.type !== 'engine') continue;
+    if (sideOf(o) === mySide) continue;
     const d = dist(e, o);
     if (d < bestD && d <= radius) { bestD = d; best = o; }
   }
@@ -38,6 +41,14 @@ export function findFoe(e, radius) {
 export function damage(target, amount, source = null) {
   const real = Math.max(1, Math.round(amount - (target.armor || 0)));
   target.hp -= real;
+
+  // вздрагивание от удара, но не поверх собственного замаха и не при смерти
+  if (target.hp > 0 && target.role === 'swordsman'
+      && target.animState !== 'attack' && target.animState !== 'attack2'
+      && target.animState !== 'death') {
+    target.animState = real > 8 ? 'hurt' : 'hit';
+  }
+
   if (target.hp <= 0) kill(target, source);
   return real;
 }
@@ -128,7 +139,9 @@ export function updateCombat(map, dt) {
       if (Math.abs(dx) > Math.abs(dy)) e.dir = dx > 0 ? 'right' : 'left';
       else e.dir = dy > 0 ? 'down' : 'up';
       e.facing = dirIndex(dx, dy);
-      e.animState = 'attack';
+      // две связки удара чередуются — бой перестаёт выглядеть заводным
+      e.swing = (e.swing || 0) + 1;
+      e.animState = e.swing % 2 ? 'attack' : 'attack2';
 
       if (e.range > 0) shoot(e, foe);
       damage(foe, e.damage, e);

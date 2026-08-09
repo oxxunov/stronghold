@@ -8,6 +8,7 @@ import { events } from '../core/events.js';
 import { damageWall } from '../world/walls.js';
 import { buildingAt, damageBuilding } from '../economy/buildings.js';
 import { spawnPlague } from './tunnel.js';
+import { requestPath } from '../world/pathfinding.js';
 
 export const ENGINES = {
   catapult: {
@@ -84,6 +85,7 @@ export function buildEngine(map, id) {
 
   const e = addEntity({
     type: 'engine',
+    side: 'player',
     engine: id,
     x: spot.x, y: spot.y,
     hp: 200, maxHp: 200,
@@ -179,9 +181,12 @@ export function updateEngines(map, dt) {
 
     const d = Math.hypot(e.aim.x - e.x, e.aim.y - e.y);
     if (d > def.range) {
-      // не достаёт — подъезжаем ближе
+      // не достаёт — подъезжаем ближе своим ходом
       if (!e.pathPending && (!e.path || e.pathStep >= e.path.length)) {
-        e.needMove = true;
+        const step = Math.max(1, Math.round(d - def.range * 0.7));
+        const nx = Math.round(e.x + (e.aim.x - e.x) / d * step);
+        const ny = Math.round(e.y + (e.aim.y - e.y) / d * step);
+        if (map.walkable(nx, ny)) requestPath(e, nx, ny);
       }
       continue;
     }
@@ -276,4 +281,27 @@ export function loadCow(engine) {
   engine.ammo = 'cow';
   events.emit('cowLoaded', { engine });
   return { ok: true };
+}
+
+
+/** Осадная машина противника — ставится сразу собранной у его замка */
+export function spawnEnemyEngine(map, id, x, y) {
+  const def = ENGINES[id];
+  if (!def || !map.walkable(x, y)) return null;
+  return addEntity({
+    type: 'engine',
+    side: 'enemy',
+    engine: id,
+    x, y,
+    hp: 200, maxHp: 200,
+    speed: def.speed,
+    range: def.range,
+    damage: def.damage,
+    reload: def.reload,
+    cool: def.reload,
+    frame: 0,
+    path: null, pathStep: 0, pathPending: false,
+    order: 'stand',
+    aim: null,
+  });
 }

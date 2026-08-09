@@ -177,6 +177,12 @@ events.on('built', (b) => {
   if (CONFIG.DEBUG) console.log('[стройка]', b.def.name, b.x, b.y);
 });
 
+events.on('lordDefeated', () => {
+  for (const e of state.entities) {
+    if (e.type === 'soldier') e.animState = 'victory';
+  }
+});
+
 events.on('month', () => {
   regrowForest(map);
   breedAnimals(map);      // дичь восстанавливается, если её выбили

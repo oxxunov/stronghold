@@ -94,7 +94,8 @@ export function hire(map, unit) {
 export function army() {
   const out = {};
   for (const e of state.entities) {
-    if (e.type !== 'soldier' && e.type !== 'enemy' && e.type !== 'tunneller') continue;
+    if (e.type !== 'soldier' && e.type !== 'enemy'
+        && e.type !== 'tunneller' && e.type !== 'engine') continue;
     out[e.unit] = (out[e.unit] || 0) + 1;
   }
   return out;
@@ -107,7 +108,8 @@ export const armySize = () =>
 /** Пока приказов нет, солдаты топчутся у казармы */
 export function updateSoldiers(map, dt, requestPath) {
   for (const e of state.entities) {
-    if (e.type !== 'soldier' && e.type !== 'enemy' && e.type !== 'tunneller') continue;
+    if (e.type !== 'soldier' && e.type !== 'enemy'
+        && e.type !== 'tunneller' && e.type !== 'engine') continue;
 
     if (e.path && e.pathStep < e.path.length) {
       const node = e.path[e.pathStep];
@@ -123,17 +125,25 @@ export function updateSoldiers(map, dt, requestPath) {
       else { e.x += (dx / dist) * step; e.y += (dy / dist) * step; }
       e.anim = (e.anim + step * 4) % CONFIG.UNIT_FRAMES;
       e.frame = Math.floor(e.anim);
-      if (e.animState !== 'attack' && e.animState !== 'death') e.animState = 'walk';
+      if (e.animState !== 'attack' && e.animState !== 'death') {
+        // по приказу бегут, без приказа прогуливаются
+        e.animState = (e.order === 'move' || e.order === 'fight'
+                       || e.order === 'march') ? 'run' : 'walk';
+      }
       continue;
     }
     if (e.pathPending) continue;
 
     e.frame = 0;
-    if (e.animState === 'walk') e.animState = 'idle';
+    if (e.animState === 'walk' || e.animState === 'run') {
+      // на посту стоят со щитом, в остальном просто дышат
+      e.animState = e.order === 'post' ? 'block' : 'idle';
+    }
 
     // дошёл до места приказа — стоит там, а не бредёт обратно
     if (e.order === 'move' || e.order === 'post' || e.order === 'fight'
-        || e.order === 'dig') continue;
+        || e.order === 'dig' || e.order === 'bombard' || e.order === 'deploy') continue;
+    if (e.type === 'engine') continue;      // машины сами не бродят
     if (e.type === 'enemy') continue;
 
     e.idle -= dt;

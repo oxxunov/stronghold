@@ -16,7 +16,7 @@
 import json, os, shutil
 from PIL import Image
 
-SRC = '/home/claude/sword/SWORDSMAN_64x64_12DIRECTIONS_ACTUAL'
+SRC = '/home/claude/sword2'
 OUT = 'assets/sprites/swordsman'
 FRAME = 64
 
@@ -27,9 +27,27 @@ DIRS16 = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
 # чего нет в исходнике — берём зеркалом
 MIRROR = {'W': 'E', 'WNW': 'ENE', 'NW': 'NE', 'NNW': 'NNE'}
 
-# что реально нужно игре
-ANIMS = ['idle', 'walk', 'attack', 'hurt', 'death']
-
+# Пакуем ВСЕ анимации из пака и все кадры без прореживания:
+# качество важнее размера. Длинные циклы идут на 30 к/с, как в исходнике.
+ANIMS = {
+    'idle':             {'fps': 8},
+    'walk':             {'fps': 15},
+    'run':              {'fps': 18},
+    'attack':           {'fps': 30},
+    'attack2':          {'fps': 30},
+    'block':            {'fps': 30},
+    'parry':            {'fps': 30},
+    'charge':           {'fps': 30},
+    'dodge':            {'fps': 30},
+    'hit':              {'fps': 30},
+    'hurt':             {'fps': 30},
+    'death':            {'fps': 30},
+    'death_transition': {'fps': 30},
+    'victory':          {'fps': 24},
+    'cast':             {'fps': 30},
+    'interact':         {'fps': 24},
+    'use_item':         {'fps': 24},
+}
 
 def frames_of(anim, d):
     src_dir = MIRROR.get(d, d)
@@ -51,9 +69,9 @@ def build():
     meta = {'frame': FRAME, 'dirs': DIRS16, 'anims': {}}
     foot_max = 0
 
-    for anim in ANIMS:
+    for anim, cfg in ANIMS.items():
         per_dir = {d: frames_of(anim, d) for d in DIRS16}
-        count = max(len(v) for v in per_dir.values())
+        count = max((len(v) for v in per_dir.values()), default=0)
         if not count:
             continue
 
@@ -65,12 +83,16 @@ def build():
                 if im is None:
                     continue
                 sheet.paste(im, (col * FRAME, row * FRAME))
-                b = im.getbbox()
-                if b:
-                    foot_max = max(foot_max, b[3])
+                # линия ступней берётся ТОЛЬКО по стойке и ходьбе:
+                # в смерти тело лежит ниже, и по нему якорь ставить нельзя —
+                # иначе все спрайты уедут вверх
+                if anim in ('idle', 'walk'):
+                    b = im.getbbox()
+                    if b:
+                        foot_max = max(foot_max, b[3])
 
         sheet.save(os.path.join(OUT, f'{anim}.png'))
-        meta['anims'][anim] = {'frames': count, 'fps': 10 if anim != 'idle' else 4}
+        meta['anims'][anim] = {'frames': count, 'fps': cfg['fps']}
 
     # где у спрайта ступни: ниже этой линии в кадре пусто
     meta['foot'] = foot_max

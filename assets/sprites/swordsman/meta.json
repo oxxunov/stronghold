@@ -20,24 +20,72 @@
   ],
   "anims": {
     "idle": {
-      "frames": 1,
-      "fps": 4
+      "frames": 2,
+      "fps": 8
     },
     "walk": {
       "frames": 8,
-      "fps": 10
+      "fps": 15
+    },
+    "run": {
+      "frames": 8,
+      "fps": 18
     },
     "attack": {
-      "frames": 11,
-      "fps": 10
+      "frames": 46,
+      "fps": 30
+    },
+    "attack2": {
+      "frames": 42,
+      "fps": 30
+    },
+    "block": {
+      "frames": 42,
+      "fps": 30
+    },
+    "parry": {
+      "frames": 42,
+      "fps": 30
+    },
+    "charge": {
+      "frames": 42,
+      "fps": 30
+    },
+    "dodge": {
+      "frames": 42,
+      "fps": 30
+    },
+    "hit": {
+      "frames": 38,
+      "fps": 30
     },
     "hurt": {
-      "frames": 5,
-      "fps": 10
+      "frames": 38,
+      "fps": 30
     },
     "death": {
-      "frames": 8,
-      "fps": 10
+      "frames": 42,
+      "fps": 30
+    },
+    "death_transition": {
+      "frames": 42,
+      "fps": 30
+    },
+    "victory": {
+      "frames": 42,
+      "fps": 24
+    },
+    "cast": {
+      "frames": 42,
+      "fps": 30
+    },
+    "interact": {
+      "frames": 42,
+      "fps": 24
+    },
+    "use_item": {
+      "frames": 42,
+      "fps": 24
     }
   },
   "foot": 51

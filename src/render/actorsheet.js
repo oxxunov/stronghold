@@ -91,7 +91,8 @@ export function stepAnim(e, sheet, dt) {
 
     if (e.animFrame >= total) {
       // разовые анимации доигрывают и возвращают в покой
-      if (want === 'attack' || want === 'hurt') {
+      if (want === 'attack' || want === 'attack2' || want === 'hurt'
+          || want === 'hit' || want === 'dodge' || want === 'parry') {
         e.animState = 'idle';
         e.animFrame = 0;
       } else if (want === 'death') {

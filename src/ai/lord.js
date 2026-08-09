@@ -7,6 +7,7 @@ import { events } from '../core/events.js';
 import { DEFS, place, checkPlace } from '../economy/buildings.js';
 import { WALL_STONE, placeWalls, canPlaceWall } from '../world/walls.js';
 import { UNITS, spawnEnemy } from '../military/units.js';
+import { spawnEnemyEngine, aimAt } from '../military/siege.js';
 import { requestPath } from '../world/pathfinding.js';
 
 export let LORDS = {};
@@ -156,14 +157,63 @@ function musterSpot(map, keep) {
   return null;
 }
 
-/** Выпустить волну и направить её на наш донжон */
+/**
+ * Куда бить: сначала ищем ворота (самое слабое место в стене),
+ * потом самый побитый участок стены, и только если стен нет — прямо донжон.
+ */
+export function pickTarget(map) {
+  const keep = state.buildings.find((b) => b.def.id === 'keep' && b.side !== 'enemy');
+  if (!keep) return null;
+
+  const gate = state.buildings.find((b) => b.def.passable && b.side !== 'enemy');
+  if (gate) return { x: gate.x, y: gate.y, kind: 'gate' };
+
+  // ближайшая к нашему замку клетка стены с наименьшей прочностью
+  let best = null, bestScore = Infinity;
+  for (let y = 0; y < map.h; y++) {
+    for (let x = 0; x < map.w; x++) {
+      const i = map.idx(x, y);
+      if (!map.walls[i]) continue;
+      const d = Math.hypot(x - keep.x, y - keep.y);
+      if (d > 14) continue;                     // это стены не нашего замка
+      const score = map.wallHp[i] + d * 4;
+      if (score < bestScore) { bestScore = score; best = { x, y, kind: 'wall' }; }
+    }
+  }
+  if (best) return best;
+
+  return { x: keep.x + 2, y: keep.y + keep.h, kind: 'keep' };
+}
+
+/** Точка сбора: рядом с целью, но вне выстрела со стен */
+function stagingSpot(map, target) {
+  const L = state.lord;
+  const fromX = L ? L.keep.x : 0, fromY = L ? L.keep.y : 0;
+  const dx = target.x - fromX, dy = target.y - fromY;
+  const len = Math.hypot(dx, dy) || 1;
+
+  for (let back = 10; back >= 4; back--) {
+    const x = Math.round(target.x - (dx / len) * back);
+    const y = Math.round(target.y - (dy / len) * back);
+    if (map.walkable(x, y)) return { x, y };
+  }
+  return null;
+}
+
+/**
+ * Выпустить волну. Отряд сначала собирается в стороне и только потом идёт
+ * на штурм — иначе бойцы прибывают поодиночке и гибнут по одному.
+ */
 export function sendWave(map) {
   const L = state.lord;
   if (!L || !L.alive) return 0;
 
   const size = L.def.waveStart + L.wave * L.def.waveGrow;
   const comp = waveComposition(L.def, size);
-  const target = state.buildings.find((b) => b.def.id === 'keep' && b.side !== 'enemy');
+  const target = pickTarget(map);
+  const staging = target ? stagingSpot(map, target) : null;
+
+  const wave = { units: [], engines: [], target, stage: 'muster', timer: 0 };
 
   let sent = 0;
   for (const unitId of comp) {
@@ -172,13 +222,74 @@ export function sendWave(map) {
     const e = spawnEnemy(map, unitId, spot.x, spot.y);
     if (!e) continue;
     e.order = 'march';
-    if (target) requestPath(e, target.x + 2, target.y + target.h);
+    e.wave = wave;
+    if (staging) requestPath(e, staging.x, staging.y);
+    wave.units.push(e);
     sent++;
   }
 
+  // злые лорды присылают машины: таран по воротам, катапульту по стене
+  if (L.def.aggression >= 1.0 && L.wave >= 1) {
+    const kind = target && target.kind === 'gate' ? 'ram' : 'catapult';
+    const spot = musterSpot(map, L.keep);
+    if (spot) {
+      const eng = spawnEnemyEngine(map, kind, spot.x, spot.y);
+      if (eng) {
+        eng.wave = wave;
+        if (staging) requestPath(eng, staging.x, staging.y);
+        wave.engines.push(eng);
+      }
+    }
+  }
+
+  L.waves = L.waves || [];
+  L.waves.push(wave);
   L.wave++;
-  events.emit('wave', { number: L.wave, size: sent });
+  events.emit('wave', { number: L.wave, size: sent, target });
   return sent;
+}
+
+/**
+ * Сбор и штурм. Как только большинство дошло до точки сбора (или истекло
+ * терпение), волна переходит в атаку: рукопашники к цели, стрелки чуть позади,
+ * машины наводятся на стену или ворота.
+ */
+function updateWaves(map, dt) {
+  const L = state.lord;
+  if (!L || !L.waves) return;
+
+  for (let i = L.waves.length - 1; i >= 0; i--) {
+    const w = L.waves[i];
+    w.units = w.units.filter((e) => state.entities.includes(e));
+    w.engines = w.engines.filter((e) => state.entities.includes(e));
+    if (!w.units.length && !w.engines.length) { L.waves.splice(i, 1); continue; }
+
+    if (w.stage !== 'muster') continue;
+
+    w.timer += dt;
+    const ready = w.units.filter(
+      (e) => !e.pathPending && (!e.path || e.pathStep >= e.path.length)).length;
+
+    // ждём большинство, но не дольше сорока секунд
+    if (ready < w.units.length * 0.7 && w.timer < 40) continue;
+
+    w.stage = 'assault';
+    const t = w.target || pickTarget(map);
+    if (!t) continue;
+
+    for (const e of w.units) {
+      e.order = 'march';
+      e.stuck = 0;
+      // стрелки держатся на пару клеток позади
+      const back = e.range > 0 ? 2 : 0;
+      requestPath(e, t.x, Math.max(0, t.y + back));
+    }
+    for (const eng of w.engines) {
+      aimAt(eng, t.x, t.y);
+      eng.order = 'bombard';
+    }
+    events.emit('assault', { target: t, size: w.units.length });
+  }
 }
 
 /**
@@ -201,6 +312,8 @@ export function updateLord(map, dt) {
     L.timer = L.def.interval;
     sendWave(map);
   }
+
+  updateWaves(map, dt);
 
   // застрявшие атакуют преграду
   for (const e of state.entities) {
