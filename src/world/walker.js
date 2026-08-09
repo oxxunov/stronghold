@@ -5,13 +5,18 @@ import { CONFIG } from '../config.js';
 import { state, addEntity } from '../core/state.js';
 import { requestPath } from './pathfinding.js';
 import { UNIT_ROLES } from '../render/sprites.js';
+import { dirIndex } from '../render/actorsheet.js';
+
+// в тестовой толпе показываем и мечника из пака — иначе его не увидеть,
+// пока не построишь казарму и не наберёшь снаряжение
+const TEST_ROLES = [...UNIT_ROLES, 'swordsman'];
 
 export function spawnWalkers(map, count) {
   for (let i = 0; i < count; i++) {
     const p = map.randomWalkable();
     addEntity({
       type: 'walker',
-      role: UNIT_ROLES[i % UNIT_ROLES.length],
+      role: TEST_ROLES[i % TEST_ROLES.length],
       x: p.x, y: p.y,
       speed: 1.4 + Math.random() * 1.2,   // клеток в секунду
       path: null,
@@ -20,6 +25,8 @@ export function spawnWalkers(map, count) {
       idle: Math.random() * 2,
       dir: 'down',
       frame: 0,
+      facing: 8,
+      animState: 'idle', animName: 'idle', animFrame: 0, animTime: 0,
       anim: Math.random() * 8,            // фаза ходьбы, чтобы толпа не шагала в ногу
     });
   }
@@ -33,6 +40,7 @@ export function updateWalkers(map, dt) {
       if (e.pathPending) continue;
       e.idle -= dt;
       e.frame = 0;                        // стоит — первый кадр
+      e.animState = 'idle';
       if (e.idle > 0) continue;
       const t = map.randomWalkable();
       requestPath(e, t.x, t.y);
@@ -49,6 +57,8 @@ export function updateWalkers(map, dt) {
       // направление взгляда по большей составляющей движения
       if (Math.abs(dx) > Math.abs(dy)) e.dir = dx > 0 ? 'right' : 'left';
       else e.dir = dy > 0 ? 'down' : 'up';
+      e.facing = dirIndex(dx, dy);
+      e.animState = 'walk';
     }
 
     if (dist <= step) {

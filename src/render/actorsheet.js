@@ -72,6 +72,7 @@ export class ActorSheet {
  */
 export function stepAnim(e, sheet, dt) {
   if (!sheet.meta) return;
+  if (e.facing === undefined) e.facing = 8;
 
   const want = e.animState || 'idle';
   if (e.animName !== want) {
