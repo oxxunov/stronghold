@@ -12,6 +12,8 @@ import { foodStock, daysOfFood, cycleRation, rationById } from '../society/food.
 import { cycleTax, taxById, popularityFactors, fearFactor, workRate } from '../society/popularity.js';
 import { aleInInns } from '../society/ale.js';
 import { refreshMarket } from './marketpanel.js';
+import { refreshBarracks } from './barrackspanel.js';
+import { armySize } from '../military/units.js';
 
 const $ = (id) => document.getElementById(id);
 let cam = null;
@@ -91,6 +93,7 @@ export function updateHud(dtReal) {
   $('zoom').textContent = cam ? cam.zoom.toFixed(2) : '—';
   $('blds').textContent = state.buildings.length;
   $('free').textContent = state.population;
+  $('army').textContent = armySize();
 
   const stock = foodStock();
   const days = daysOfFood();
@@ -127,6 +130,7 @@ export function updateHud(dtReal) {
 
   refreshAffordable();
   refreshMarket();
+  refreshBarracks();
 
   acc = 0; pathAcc = 0;
 }

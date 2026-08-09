@@ -6,6 +6,7 @@ import { state } from '../core/state.js';
 import { CATEGORIES, DEFS, checkPlace, place, canAfford } from '../economy/buildings.js';
 import { WALL_TYPES, WALL_WOOD, WALL_STONE, lineTiles, placeWalls,
          canPlaceWall, affordableCount } from '../world/walls.js';
+import { MOAT_TYPES, MOAT_DRY, MOAT_PITCH, digMoat, canDig } from '../world/moat.js';
 
 let map = null;
 let camera = null;
@@ -19,6 +20,7 @@ export const buildMode = {
 
   // строительство стены полосой: тянем палец от начала к концу
   wall: 0,          // 0 — обычное здание, иначе тип стены
+  moat: 0,          // если задан — чертим ров, а не стену
   from: null,       // клетка начала
   tiles: [],        // предпросчитанная линия
 };
@@ -77,6 +79,17 @@ function selectCategory(cat) {
       b.onclick = () => startWall(type);
       el.list.appendChild(b);
     }
+
+    for (const type of [MOAT_DRY, MOAT_PITCH]) {
+      const m = MOAT_TYPES[type];
+      const b = document.createElement('button');
+      b.className = 'bcard';
+      const cost = Object.entries(m.cost)
+        .map(([r, n]) => `${RES_NAME[r] || r} ${n}`).join(' ') || 'бесплатно';
+      b.innerHTML = `<b>${m.name}</b><i>линия</i><s>${cost}</s>`;
+      b.onclick = () => startWall(type, true);
+      el.list.appendChild(b);
+    }
   }
 
   for (const def of Object.values(DEFS)) {
@@ -92,11 +105,15 @@ function selectCategory(cat) {
   }
 }
 
-const RES_NAME = { wood: 'дерево', stone: 'камень', iron: 'железо', gold: 'золото' };
+const RES_NAME = { wood: 'дерево', stone: 'камень', iron: 'железо',
+                   gold: 'золото', pitch: 'смола' };
 
-function startWall(type) {
+const stateRes = (res) => state.resources[res] || 0;
+
+function startWall(type, isMoat = false) {
   buildMode.active = true;
   buildMode.wall = type;
+  buildMode.moat = isMoat ? type : 0;
   buildMode.def = null;
   buildMode.from = null;
   buildMode.tiles = [];
@@ -117,6 +134,21 @@ export function wallDrag(phase, sx, sy) {
     buildMode.tiles = [t];
   } else if (buildMode.from) {
     buildMode.tiles = lineTiles(buildMode.from.x, buildMode.from.y, t.x, t.y);
+  }
+
+  if (buildMode.moat) {
+    const good = buildMode.tiles.filter((c) => canDig(map, c.x, c.y).ok);
+    const m = MOAT_TYPES[buildMode.moat];
+    const res = Object.keys(m.cost)[0];
+    const paid = res
+      ? Math.min(good.length, Math.floor((stateRes(res)) / m.cost[res]))
+      : good.length;
+    buildMode.valid = paid > 0;
+    el.reason.textContent = paid
+      ? `${m.name}: ${paid} клеток` + (res ? `, ${RES_NAME[res]} ${m.cost[res] * paid}` : '')
+      : 'Копать негде';
+    el.reason.className = paid ? 'ok' : 'bad';
+    return true;
   }
 
   const good = buildMode.tiles.filter((c) => canPlaceWall(map, c.x, c.y).ok);
@@ -167,7 +199,8 @@ function commit() {
 
   if (buildMode.wall) {
     const type = buildMode.wall;
-    placeWalls(map, type, buildMode.tiles);
+    if (buildMode.moat) digMoat(map, type, buildMode.tiles);
+    else placeWalls(map, type, buildMode.tiles);
     buildMode.from = null;
     buildMode.tiles = [];
     el.reason.textContent = 'Проведите пальцем следующую линию';
@@ -185,6 +218,7 @@ export function cancel() {
   buildMode.active = false;
   buildMode.def = null;
   buildMode.wall = 0;
+  buildMode.moat = 0;
   buildMode.from = null;
   buildMode.tiles = [];
   el.confirm.style.display = 'none';

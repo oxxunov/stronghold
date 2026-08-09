@@ -13,11 +13,16 @@ import { initHud, updateHud } from './ui/hud.js';
 import { loadBuildings, place, checkPlace, DEFS } from './economy/buildings.js';
 import { initBuildPanel, tapMap, buildMode, wallDrag } from './ui/buildpanel.js';
 import { initMarketPanel, refreshMarket } from './ui/marketpanel.js';
+import { initBarracksPanel } from './ui/barrackspanel.js';
+import { loadUnits, updateSoldiers } from './military/units.js';
+import { selection, orderMove, orderPost, clearSelection } from './military/orders.js';
+import { buildingAt } from './economy/buildings.js';
 import { assignJobs, updateWorkers, regrowForest, growFields } from './economy/workers.js';
 import { populationDay, updateIdlers, housingCap } from './society/population.js';
 import { feedPeople } from './society/food.js';
 import { serveAle } from './society/ale.js';
 import { populateAnimals, updateAnimals, breedAnimals } from './world/animals.js';
+import { updateFires } from './world/moat.js';
 import { monthlyPopularity } from './society/popularity.js';
 
 const canvas = document.getElementById('game');
@@ -44,13 +49,22 @@ canvas.addEventListener('pointermove', (e) => {
 canvas.addEventListener('pointerup', (e) => {
   if (buildMode.wall) { wallDrag('move', e.clientX, e.clientY); return; }
   if (camera.moved) return;              // это было перетаскивание карты, не тап
-  if (buildMode.active) tapMap(e.clientX, e.clientY);
+  if (buildMode.active) { tapMap(e.clientX, e.clientY); return; }
+
+  // тап по карте с выделенным отрядом = приказ
+  if (selection.size) {
+    const t = camera.screenToTile(e.clientX, e.clientY);
+    const b = buildingAt(t.x, t.y);
+    if (b && b.def.garrison) orderPost(map, b);
+    else orderMove(map, t.x, t.y);
+  }
 });
 
 // --- Загрузка данных, потом старт ---
-loadBuildings().then(() => {
+Promise.all([loadBuildings(), loadUnits()]).then(() => {
   initBuildPanel(map, camera);
   initMarketPanel();
+  initBarracksPanel(map);
 
   // донжон в центре — точка отсчёта для игрока, склад на ближайшем годном месте
   const cx = (map.w >> 1) - 2, cy = (map.h >> 1) - 2;
@@ -89,7 +103,9 @@ function update(dt) {
   updateWorkers(map, dt);
   updateIdlers(map, dt, requestPath);
   updateAnimals(map, dt, requestPath);
+  updateSoldiers(map, dt, requestPath);
   growFields();
+  updateFires(dt);
 
   // наём проверяем раз в секунду, а не каждый тик
   jobTimer += dt;

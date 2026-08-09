@@ -1139,6 +1139,53 @@ def squaretower():
     return _tower(3, 'square', big=True)
 
 
+def wolfpit():
+    """Волчья яма: замаскированная ловушка с кольями. 1x1."""
+    W = Hh = T
+    cv = Canvas(W, Hh)
+    for y in range(Hh):
+        for x in range(W):
+            cv.px(x, y, mix((96, 108, 62), 0.94 + h(x, y, 51) * 0.16))
+    # прикрытие из веток
+    cv.d.ellipse([3, 5, W - 4, Hh - 4], fill=(*(74, 62, 44), 255))
+    for i in range(7):
+        y = 8 + i * 3
+        cv.rect(4, y, W - 5, y, mix((118, 100, 66), 1.0 - i * 0.03))
+    for i in range(4):
+        x = 6 + i * 6
+        cv.rect(x, 7, x, Hh - 6, mix((104, 88, 58), 1.05))
+    # торчащие колья
+    for (px, py) in ((9, 12), (17, 16), (13, 20), (21, 11)):
+        cv.rect(px, py, px, py + 3, (206, 198, 176))
+        cv.px(px, py - 1, (232, 226, 208))
+    cv.outline()
+    return cv.im
+
+
+def well():
+    """Колодец: каменное кольцо, навес и ведро. 1x1."""
+    W, Hh = T, T + 20
+    cv = Canvas(W, Hh)
+    top = Hh - T
+    cv.shadow(6, Hh - 4, W - 5, Hh - 1, 60)
+    # кольцо
+    cv.d.ellipse([5, top + 8, W - 6, Hh - 4], fill=(*mix(STONE, 0.92), 255))
+    cv.d.ellipse([8, top + 11, W - 9, Hh - 7], fill=(*(40, 52, 60), 255))
+    cv.d.ellipse([10, top + 13, W - 11, Hh - 10], fill=(*(64, 96, 118), 255))
+    # стойки и навес
+    for px in (6, W - 8):
+        cv.rect(px, top - 12, px + 1, top + 12, mix(WOOD, 0.86))
+    cv.rect(4, top - 16, W - 5, top - 12, mix(THATCH, 1.0))
+    cv.rect(4, top - 16, W - 5, top - 15, mix(THATCH, 1.2))
+    # ворот и ведро
+    cv.rect(6, top - 8, W - 8, top - 6, mix(WOOD, 0.94))
+    cv.rect(W // 2 - 1, top - 6, W // 2, top + 2, (78, 70, 58))
+    cv.rect(W // 2 - 3, top + 2, W // 2 + 2, top + 7, mix(WOOD, 0.8))
+    cv.rect(W // 2 - 3, top + 2, W // 2 + 2, top + 3, mix(WOOD, 1.1))
+    cv.outline()
+    return cv.im
+
+
 BUILDINGS = {
     'keep':       ('Донжон',          keep),
     'hovel':      ('Лачуга',          lambda: house(2, 2, PLASTER, 'plaster', THATCH, 'thatch', True, 1, False, 1)),
@@ -1150,6 +1197,8 @@ BUILDINGS = {
     'mill':       ('Мельница',        mill),
     'bakery':     ('Пекарня',         lambda: house(3, 3, PLASTER, 'plaster', TILE_R, 'tile', True, 2, True, 4, storeys=2)),
     'gatehouse':  ('Ворота',          gatehouse),
+    'wolfpit':    ('Волчья яма',      wolfpit),
+    'well':       ('Колодец',         well),
     'watchtower': ('Сторожевая башня', watchtower),
     'roundtower': ('Круглая башня',   roundtower),
     'squaretower':('Квадратная башня', squaretower),

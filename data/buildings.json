@@ -708,5 +708,44 @@
     "rangeBonus": 3,
     "engines": true,
     "desc": "Сюда встанут баллиста и мангонель."
+  },
+  "wolfpit": {
+    "name": "Волчья яма",
+    "category": "castle",
+    "size": [
+      1,
+      1
+    ],
+    "cost": {
+      "wood": 4
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "passable": true,
+    "trap": true,
+    "damage": 40,
+    "desc": "Ловушка. Срабатывает один раз по тому, кто наступит."
+  },
+  "well": {
+    "name": "Колодец",
+    "category": "town",
+    "size": [
+      1,
+      1
+    ],
+    "cost": {
+      "wood": 10,
+      "stone": 10
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "water": true,
+    "desc": "Вода для тушения пожаров."
   }
 }

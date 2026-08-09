@@ -98,7 +98,7 @@ export function findPath(map, sx, sy, tx, ty, maxNodes = 2500) {
       const ni = ny * w + nx;
       if (closed[ni]) continue;
 
-      const ng = g[cur.i] + cost;
+      const ng = g[cur.i] + cost * map.moveCost(nx, ny);
       if (ng < g[ni]) {
         g[ni] = ng;
         from[ni] = cur.i;
@@ -165,7 +165,7 @@ export function findPathAny(map, sx, sy, goals, maxNodes = 4000) {
       if (dx && dy && (!map.walkable(cur.x + dx, cur.y) || !map.walkable(cur.x, cur.y + dy))) continue;
       const ni = ny * w + nx;
       if (closed[ni]) continue;
-      const ng = g[cur.i] + cost;
+      const ng = g[cur.i] + cost * map.moveCost(nx, ny);
       if (ng < g[ni]) {
         g[ni] = ng;
         from[ni] = cur.i;

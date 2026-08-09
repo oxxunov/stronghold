@@ -39,6 +39,11 @@ const defs = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/buildings.json'), 
 for (const [id, d] of Object.entries(defs)) d.id = id;
 Object.assign(B.DEFS, defs);
 
+const U = await load('src/military/units.js');
+const unitDefs = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/units.json'), 'utf8'));
+for (const [id, u] of Object.entries(unitDefs)) u.id = id;
+Object.assign(U.UNITS, unitDefs);
+
 // --- рамки теста ---
 let failures = 0, checks = 0;
 const ok = (cond, msg) => {
@@ -509,6 +514,191 @@ section('6.9. Ворота и башни');
 
   ok(B.DEFS.squaretower.garrison > B.DEFS.watchtower.garrison,
      'большая башня вмещает не больше маленькой');
+}
+
+// ======================================================= 6.95 Ров и ловушки
+section('6.95. Ров, ловушки, колодец');
+{
+  const map = resetState(4747);
+  const Mo = await load('src/world/moat.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  state.resources.pitch = 20;
+  state.resources.wood = 500;
+  state.resources.stone = 500;
+
+  // ров не перекрывает путь, а замедляет
+  const line = [];
+  for (let x = 8; x < 20; x++) line.push({ x, y: 8 });
+  const dug = Mo.digMoat(map, Mo.MOAT_DRY, line);
+  ok(dug > 0, 'ров не выкопался');
+
+  const first = line.find((c) => map.moat[map.idx(c.x, c.y)]);
+  ok(map.walkable(first.x, first.y), 'по рву нельзя пройти — он должен только замедлять');
+  ok(map.moveCost(first.x, first.y) > 1, 'ров не замедляет движение');
+
+  // маршрут предпочитает обойти ров, а не лезть напрямик
+  const a = { x: first.x, y: first.y - 3 };
+  const bpt = { x: first.x, y: first.y + 3 };
+  if (map.walkable(a.x, a.y) && map.walkable(bpt.x, bpt.y)) {
+    const p = PF.findPath(map, a.x, a.y, bpt.x, bpt.y);
+    ok(p !== null, 'через ров вообще нет пути');
+    if (p) {
+      const through = p.filter((n) => map.moat[map.idx(n.x, n.y)]).length;
+      ok(through <= 1, `маршрут идёт по рву ${through} клеток вместо обхода`);
+    }
+  }
+
+  // смоляной ров стоит смолы и поджигается
+  const pitchLine = [];
+  for (let x = 8; x < 14; x++) pitchLine.push({ x, y: 12 });
+  const pitch0 = state.resources.pitch;
+  const dug2 = Mo.digMoat(map, Mo.MOAT_PITCH, pitchLine);
+  ok(dug2 > 0, 'смоляной ров не копается');
+  ok(state.resources.pitch === pitch0 - dug2, 'смола списана неверно');
+
+  // поджигаем с клетки, которая реально стала смоляной
+  const lit = pitchLine.find((c) => map.moat[map.idx(c.x, c.y)] === Mo.MOAT_PITCH);
+  ok(lit !== undefined, 'ни одна клетка не стала смоляной');
+  if (lit) {
+    const burned = Mo.ignitePitch(map, lit.x, lit.y);
+    ok(burned > 0, 'смола не загорелась');
+    ok(state.fires.length === burned, 'очаги огня не появились');
+    ok(map.moat[map.idx(lit.x, lit.y)] === Mo.MOAT_DRY,
+       'после выгорания смолы яма не осталась');
+  }
+
+  Mo.updateFires(10);
+  ok(state.fires.length === 0, 'огонь не затухает со временем');
+
+  // ловушка проходима, колодец нет
+  const wp = spot(map, B.DEFS.wolfpit, map.w >> 1, (map.h >> 1) + 8, 10);
+  ok(wp !== null, 'волчья яма никуда не встаёт');
+  if (wp) {
+    B.place(map, B.DEFS.wolfpit, wp.x, wp.y);
+    ok(map.walkable(wp.x, wp.y), 'на волчью яму нельзя наступить, ловушка бесполезна');
+  }
+  const wl = spot(map, B.DEFS.well, map.w >> 1, (map.h >> 1) + 8, 10);
+  ok(wl !== null, 'колодец никуда не встаёт');
+  if (wl) {
+    B.place(map, B.DEFS.well, wl.x, wl.y);
+    ok(!map.walkable(wl.x, wl.y), 'сквозь колодец можно пройти');
+  }
+}
+
+// ======================================================= 6.97 Наём войск
+section('6.97. Казарма и наём');
+{
+  const map = resetState(8181);
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+
+  const spearman = U.UNITS.spearman;
+  ok(!U.canHire(spearman).ok, 'наём проходит без казармы');
+
+  buildTown(map, ['stockpile', 'granary', 'armoury', 'hovel', 'hovel', 'barracks']);
+  state.resources.gold = 500;
+  state.resources.bread = 300;      // без еды народ не придёт и наём не проверить
+
+  ok(!U.canHire(spearman).ok, 'копейщик нанялся без копья');
+
+  state.resources.spear = 5;
+  // людей ещё нет — население приходит само
+  ok(!U.canHire(spearman).ok || state.population > 0, 'наём без людей');
+
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 3; d++) simDay(map);
+  ok(state.population > 0, 'народ не пришёл, некого нанимать');
+
+  const gold0 = state.resources.gold;
+  const pop0 = state.population;
+  const r = U.hire(map, spearman);
+  ok(r.ok, 'не удалось нанять копейщика: ' + (r.reason || ''));
+  ok(state.resources.spear === 4, 'копьё не списано из арсенала');
+  ok(state.resources.gold === gold0 - spearman.gold, 'золото списано неверно');
+  ok(state.population === pop0 - 1, 'свободных не убавилось');
+  ok(U.armySize() === 1, 'солдат не появился в войске');
+
+  const sold = state.entities.find((e) => e.type === 'soldier');
+  ok(sold && sold.hp === spearman.hp, 'у солдата неверное здоровье');
+  ok(sold && map.walkable(Math.round(sold.x), Math.round(sold.y)),
+     'солдат встал в непроходимую клетку');
+
+  // мечник требует и меч, и доспех
+  state.resources.sword = 1;
+  ok(!U.canHire(U.UNITS.swordsman).ok, 'мечник нанялся без доспеха');
+  state.resources.metalarmour = 1;
+  state.resources.gold = 500;
+  const r2 = U.hire(map, U.UNITS.swordsman);
+  ok(r2.ok, 'мечник не нанялся при полном снаряжении: ' + (r2.reason || ''));
+  ok(state.resources.sword === 0 && state.resources.metalarmour === 0,
+     'снаряжение мечника не списано');
+
+  // нельзя нанять больше, чем есть оружия
+  state.resources.spear = 0;
+  ok(!U.canHire(spearman).ok, 'копейщик нанимается при пустом арсенале');
+  console.log(`  войско: ${JSON.stringify(U.army())}`);
+}
+
+// ======================================================= 6.98 Приказы
+section('6.98. Приказы отрядам');
+{
+  const map = resetState(2929);
+  const O = await load('src/military/orders.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  buildTown(map, ['stockpile', 'granary', 'armoury', 'hovel', 'hovel', 'hovel', 'barracks']);
+  state.resources.gold = 900;
+  state.resources.bread = 400;
+  state.resources.spear = 10;
+  state.resources.bow = 10;
+
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 4; d++) simDay(map);
+
+  let hired = 0;
+  for (let i = 0; i < 4; i++) if (U.hire(map, U.UNITS.spearman).ok) hired++;
+  for (let i = 0; i < 3; i++) if (U.hire(map, U.UNITS.archer).ok) hired++;
+  ok(hired >= 4, `нанято всего ${hired} солдат, приказы не проверить`);
+
+  ok(O.selectAll() === hired, 'выделились не все солдаты');
+  ok(O.selectType('archer') === U.army().archer, 'выбор по типу отобрал не тех');
+
+  // приказ идти: у каждого появляется маршрут, цели разные
+  O.selectAll();
+  const tx = (map.w >> 1) + 8, ty = (map.h >> 1) + 8;
+  const n = O.orderMove(map, tx, ty);
+  ok(n === hired, 'приказ получили не все');
+  const soldiers = state.entities.filter((e) => e.type === 'soldier');
+  ok(soldiers.every((e) => e.order === 'move'), 'не у всех приказ move');
+
+  for (let i = 0; i < 20 * 40; i++) {
+    state.tick++; PF.processPathQueue(map); U.updateSoldiers(map, 0.05, PF.requestPath);
+  }
+  const arrived = soldiers.filter(
+    (e) => Math.abs(e.x - tx) <= 6 && Math.abs(e.y - ty) <= 6).length;
+  ok(arrived >= Math.ceil(hired / 2), `дошло ${arrived} из ${hired}`);
+
+  const spots = new Set(soldiers.map((e) => `${Math.round(e.x)},${Math.round(e.y)}`));
+  ok(spots.size > 1, 'весь отряд встал в одну клетку');
+
+  // пост на башне: вместимость ограничена
+  const tSpot = spot(map, B.DEFS.watchtower, map.w >> 1, (map.h >> 1) + 4, 12);
+  if (tSpot) {
+    B.place(map, B.DEFS.watchtower, tSpot.x, tSpot.y);
+    const tower = state.buildings.find((b) => b.def.id === 'watchtower');
+    O.selectAll();
+    const posted = O.orderPost(map, tower);
+    ok(posted <= tower.def.garrison, `на башню встало ${posted} при вместимости ${tower.def.garrison}`);
+    ok(posted > 0, 'на башню никто не встал');
+
+    const archer = state.entities.find((e) => e.type === 'soldier' && e.unit === 'archer' && e.post);
+    if (archer) {
+      ok(O.effectiveRange(archer) === archer.range + tower.def.rangeBonus,
+         'башня не прибавила дальность стрелку');
+    }
+  }
+
+  O.selectAll();
+  O.orderStand();
+  ok(soldiers.every((e) => e.order === 'stand'), 'приказ «вольно» не сработал');
+  O.clearSelection();
+  ok(O.selection.size === 0, 'выделение не снялось');
 }
 
 // ======================================================= 7. Данные

@@ -1,12 +1,75 @@
 {
-  "_comment": "Этап 8. Формат найма: свободный человек + оружие из арсенала + золото.",
-  "spearman":   { "name": "Копейщик",     "gold": 8,  "hp": 40,  "speed": 1.5, "damage": 6,  "armor": 0, "range": 0, "needs": ["spear"] },
-  "archer":     { "name": "Лучник",       "gold": 12, "hp": 30,  "speed": 1.7, "damage": 5,  "armor": 0, "range": 7, "needs": ["bow"] },
-  "pikeman":    { "name": "Пикинёр",      "gold": 20, "hp": 90,  "speed": 0.9, "damage": 9,  "armor": 3, "range": 0, "needs": ["pike", "metalarmour"] },
-  "crossbow":   { "name": "Арбалетчик",   "gold": 20, "hp": 45,  "speed": 1.2, "damage": 14, "armor": 1, "range": 6, "needs": ["crossbow", "leatherarmour"] },
-  "maceman":    { "name": "Булавоносец",  "gold": 20, "hp": 60,  "speed": 1.8, "damage": 11, "armor": 1, "range": 0, "needs": ["mace", "leatherarmour"] },
-  "swordsman":  { "name": "Мечник",       "gold": 40, "hp": 120, "speed": 0.8, "damage": 16, "armor": 4, "range": 0, "needs": ["sword", "metalarmour"] },
-  "knight":     { "name": "Рыцарь",       "gold": 40, "hp": 120, "speed": 3.2, "damage": 16, "armor": 4, "range": 0, "needs": ["sword", "metalarmour", "horse"] },
-  "engineer":   { "name": "Инженер",      "gold": 30, "hp": 30,  "speed": 1.4, "damage": 2,  "armor": 0, "range": 0, "needs": [] },
-  "tunneler":   { "name": "Тоннельщик",   "gold": 30, "hp": 30,  "speed": 1.4, "damage": 2,  "armor": 0, "range": 0, "needs": [] }
+  "spearman": {
+    "name": "Копейщик",
+    "sprite": "spearman",
+    "gold": 8,
+    "hp": 40,
+    "speed": 1.5,
+    "damage": 6,
+    "armor": 0,
+    "range": 0,
+    "needs": {
+      "spear": 1
+    },
+    "desc": "Дёшево и много. Держит стену, копает ров."
+  },
+  "archer": {
+    "name": "Лучник",
+    "sprite": "archer",
+    "gold": 12,
+    "hp": 30,
+    "speed": 1.7,
+    "damage": 5,
+    "armor": 0,
+    "range": 7,
+    "needs": {
+      "bow": 1
+    },
+    "desc": "Бьёт с башен и стен. В поле беззащитен."
+  },
+  "crossbow": {
+    "name": "Арбалетчик",
+    "sprite": "archer",
+    "gold": 20,
+    "hp": 45,
+    "speed": 1.2,
+    "damage": 14,
+    "armor": 1,
+    "range": 6,
+    "needs": {
+      "bow": 1,
+      "leatherarmour": 1
+    },
+    "desc": "Пробивает броню, перезаряжается медленно."
+  },
+  "swordsman": {
+    "name": "Мечник",
+    "sprite": "swordsman",
+    "gold": 40,
+    "hp": 120,
+    "speed": 0.8,
+    "damage": 16,
+    "armor": 4,
+    "range": 0,
+    "needs": {
+      "sword": 1,
+      "metalarmour": 1
+    },
+    "desc": "Таран во плоти. Медленный и дорогой."
+  },
+  "pikeman": {
+    "name": "Пикинёр",
+    "sprite": "spearman",
+    "gold": 20,
+    "hp": 90,
+    "speed": 0.9,
+    "damage": 9,
+    "armor": 3,
+    "range": 0,
+    "needs": {
+      "spear": 1,
+      "metalarmour": 1
+    },
+    "desc": "Медленный, но живучий. Стена из пик."
+  }
 }

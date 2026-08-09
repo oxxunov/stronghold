@@ -58,6 +58,7 @@ export class GameMap {
     this.occupied = new Uint8Array(w * h);  // 0 свободно, 1 занято зданием
     this.walls = new Uint8Array(w * h);     // 0 нет, 1 частокол, 2 камень
     this.passable = new Uint8Array(w * h);  // клетка занята зданием, но проходима (ворота)
+    this.moat = new Uint8Array(w * h);      // 0 нет, 1 сухой ров, 2 смоляной
     this.decor = [];
     this.stumps = [];
     this.generate(seed);
@@ -72,6 +73,16 @@ export class GameMap {
   walkableTerrain(x, y) {
     if (!this.inBounds(x, y)) return false;
     return terrainById(this.tiles[this.idx(x, y)]).walk;
+  }
+
+  /**
+   * Во сколько раз клетка «дороже» обычной. Ров не перекрывает путь,
+   * а вязнет: обходить его выгоднее, чем лезть напролом.
+   */
+  moveCost(x, y) {
+    if (!this.inBounds(x, y)) return 1;
+    const m = this.moat[this.idx(x, y)];
+    return m === 1 ? 4 : (m === 2 ? 3 : 1);
   }
 
   /** Можно ли пройти по клетке пешком */

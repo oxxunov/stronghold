@@ -6,6 +6,8 @@ import { state } from '../core/state.js';
 import { terrainById } from '../world/map.js';
 import { UnitSheet, ObjectSet, BuildingSprites, AnimalSheets, WallSheet, loadImage, TREES, ROCKS, BUSHES } from './sprites.js';
 import { WALL_TYPES, wallMask } from '../world/walls.js';
+import { MOAT_TYPES, moatMask } from '../world/moat.js';
+import { isSelected } from '../military/orders.js';
 import { SPECIES } from '../world/animals.js';
 import { buildMode } from '../ui/buildpanel.js';
 
@@ -29,6 +31,7 @@ export class Renderer {
     this.buildings = new BuildingSprites();
     this.animals = new AnimalSheets();
     this.wallSheet = new WallSheet();
+    this.moatSheet = loadImage('./assets/sprites/moat.png').img;
 
     // атлас местности: строка = тип, столбец = вариант
     const atlasRec = loadImage('./assets/sprites/terrain.png');
@@ -131,6 +134,7 @@ export class Renderer {
                     p.x, p.y, (ex - sx) * cam.zoom, (ey - sy) * cam.zoom);
     }
 
+    this.drawMoat(tl, br);
     if (state.showGrid) this.drawGrid(tl, br);
     this.drawSorted(tl, br);
     if (buildMode.active) this.drawGhost();
@@ -239,6 +243,25 @@ export class Renderer {
         this.units.draw(ctx, o.role, o.dir, o.frame | 0,
                         p.x - size / 2, p.y - size, cam.zoom);
 
+        // кольцо под выделенным солдатом
+        if (o.type === 'soldier' && isSelected(o)) {
+          ctx.strokeStyle = 'rgba(200,232,150,0.9)';
+          ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y - 2 * cam.zoom, 11 * cam.zoom, 5 * cam.zoom, 0, 0, 6.3);
+          ctx.stroke();
+        }
+
+        // полоска здоровья у раненых
+        if (o.type === 'soldier' && o.hp < o.maxHp) {
+          const bw = 20 * cam.zoom, bh = Math.max(2, 3 * cam.zoom);
+          const by = p.y - size + 2 * cam.zoom;
+          ctx.fillStyle = 'rgba(20,18,14,0.8)';
+          ctx.fillRect(p.x - bw / 2, by, bw, bh);
+          ctx.fillStyle = o.hp / o.maxHp > 0.4 ? '#7cc46a' : '#c0503f';
+          ctx.fillRect(p.x - bw / 2, by, bw * (o.hp / o.maxHp), bh);
+        }
+
         // ноша над головой — видно, кто уже несёт ресурс
         if (o.carry) {
           const s2 = Math.max(3, 7 * cam.zoom);
@@ -257,12 +280,13 @@ export class Renderer {
 Renderer.prototype.drawGhost = function () {
   const ctx = this.ctx, cam = this.camera, T = CONFIG.TILE;
 
-  // линия стены
+  // линия стены или рва
   if (buildMode.wall) {
     for (const c of buildMode.tiles) {
+      const i = this.map.idx(c.x, c.y);
       const ok = this.map.walkableTerrain(c.x, c.y)
-        && !this.map.occupied[this.map.idx(c.x, c.y)]
-        && !this.map.walls[this.map.idx(c.x, c.y)];
+        && !this.map.occupied[i] && !this.map.walls[i]
+        && !(buildMode.moat && this.map.moat[i]);
       const p = cam.worldToScreen(c.x * T, c.y * T);
       ctx.fillStyle = ok ? 'rgba(120,200,110,0.34)' : 'rgba(200,80,70,0.36)';
       ctx.fillRect(p.x, p.y, T * cam.zoom, T * cam.zoom);
@@ -297,4 +321,37 @@ Renderer.prototype.drawGhost = function () {
   // сам призрак здания
   const pf = cam.worldToScreen(buildMode.tx * T, (buildMode.ty + h) * T);
   this.buildings.draw(ctx, def.id, pf.x, pf.y, w, cam.zoom, 0.62);
+};
+
+/** Ров лежит в земле, поэтому рисуется сразу после местности */
+Renderer.prototype.drawMoat = function (tl, br) {
+  const img = this.moatSheet;
+  if (!img.complete || !img.naturalWidth) return;
+  const ctx = this.ctx, cam = this.camera, T = CONFIG.TILE, map = this.map;
+
+  const x0 = Math.max(0, Math.floor(tl.x / T));
+  const x1 = Math.min(map.w - 1, Math.ceil(br.x / T));
+  const y0 = Math.max(0, Math.floor(tl.y / T));
+  const y1 = Math.min(map.h - 1, Math.ceil(br.y / T));
+
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const t = map.moat[map.idx(x, y)];
+      if (!t) continue;
+      const p = cam.worldToScreen(x * T, y * T);
+      const size = Math.ceil(T * cam.zoom) + 1;
+      ctx.drawImage(img, moatMask(map, x, y) * T, MOAT_TYPES[t].row * T, T, T,
+                    Math.round(p.x), Math.round(p.y), size, size);
+    }
+  }
+
+  // очаги огня поверх рва
+  for (const f of state.fires) {
+    const p = cam.worldToScreen((f.x + 0.5) * T, (f.y + 0.6) * T);
+    const r = (6 + Math.sin(state.tick * 0.4 + f.x) * 2) * cam.zoom;
+    ctx.fillStyle = 'rgba(226,110,40,0.75)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.3); ctx.fill();
+    ctx.fillStyle = 'rgba(250,204,120,0.85)';
+    ctx.beginPath(); ctx.arc(p.x, p.y - r * 0.3, r * 0.5, 0, 6.3); ctx.fill();
+  }
 };
