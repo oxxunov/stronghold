@@ -290,6 +290,7 @@ export class Renderer {
         const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
         const p = cam.worldToScreen(cx, foot);
         this.engineSheet.draw(ctx, ENGINES[o.engine].row, o.frame | 0, p.x, p.y, cam.zoom);
+        this.statDrawn++;
         if (o.aim) {                       // метка прицела
           const a = cam.worldToScreen((o.aim.x + 0.5) * T, (o.aim.y + 0.5) * T);
           ctx.strokeStyle = 'rgba(230,120,80,0.8)';
@@ -312,8 +313,9 @@ export class Renderer {
         if (!drawnFoe) {
           const ok = this.units.draw(ctx, o.role, o.dir, o.frame | 0,
                                      p.x - size / 2, p.y - size, cam.zoom);
-          if (ok === false) this.placeholder(ctx, p, cam.zoom, '#c07a70');
-        }
+          if (ok === false) { this.placeholder(ctx, p, cam.zoom, '#c07a70'); this.statFailed++; }
+          else this.statDrawn++;
+        } else this.statDrawn++;
         if (o.hp < o.maxHp) {
           const bw = 20 * cam.zoom, bh = Math.max(2, 3 * cam.zoom);
           const by = p.y - size + 2 * cam.zoom;
@@ -327,6 +329,7 @@ export class Renderer {
         const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
         const p = cam.worldToScreen(cx, foot);
         this.animals.draw(ctx, sp.file, o.dir, o.frame | 0, sp.frames, p.x, p.y, cam.zoom);
+        this.statDrawn++;
       } else if (o.kind) {
         const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
         const p = cam.worldToScreen(cx, foot);
@@ -337,8 +340,24 @@ export class Renderer {
         const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
         const p = cam.worldToScreen(cx, foot);
         const size = CONFIG.UNIT * cam.zoom;
-        this.units.draw(ctx, o.role, o.dir, o.frame | 0,
-                        p.x - size / 2, p.y - size, cam.zoom);
+
+        // мечник живёт в отдельном паке с 16 направлениями и анимациями
+        let painted = false;
+        if (o.role === 'swordsman' && this.swordsman.meta) {
+          painted = this.swordsman.draw(ctx, o.animName || 'idle', o.facing | 0,
+                                        o.animFrame | 0, p.x, p.y, cam.zoom * 2);
+        }
+        if (!painted) {
+          const ok = this.units.draw(ctx, o.role, o.dir, o.frame | 0,
+                                     p.x - size / 2, p.y - size, cam.zoom);
+          if (ok === false) {
+            this.placeholder(ctx, p, cam.zoom, '#9aa0aa');
+            this.statFailed++;
+          } else {
+            painted = true;
+          }
+        }
+        if (painted) this.statDrawn++;
 
         // кольцо под выделенным солдатом
         if (o.type === 'soldier' && isSelected(o)) {
