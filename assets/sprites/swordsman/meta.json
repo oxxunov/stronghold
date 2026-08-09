@@ -1,0 +1,44 @@
+{
+  "frame": 64,
+  "dirs": [
+    "N",
+    "NNE",
+    "NE",
+    "ENE",
+    "E",
+    "ESE",
+    "SE",
+    "SSE",
+    "S",
+    "SSW",
+    "SW",
+    "WSW",
+    "W",
+    "WNW",
+    "NW",
+    "NNW"
+  ],
+  "anims": {
+    "idle": {
+      "frames": 1,
+      "fps": 4
+    },
+    "walk": {
+      "frames": 8,
+      "fps": 10
+    },
+    "attack": {
+      "frames": 11,
+      "fps": 10
+    },
+    "hurt": {
+      "frames": 5,
+      "fps": 10
+    },
+    "death": {
+      "frames": 8,
+      "fps": 10
+    }
+  },
+  "foot": 51
+}

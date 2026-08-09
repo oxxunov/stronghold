@@ -16,6 +16,7 @@ import { initMarketPanel, refreshMarket } from './ui/marketpanel.js';
 import { initBarracksPanel } from './ui/barrackspanel.js';
 import { loadUnits, updateSoldiers } from './military/units.js';
 import { selection, orderMove, orderPost, clearSelection } from './military/orders.js';
+import { updateCombat } from './military/combat.js';
 import { buildingAt } from './economy/buildings.js';
 import { assignJobs, updateWorkers, regrowForest, growFields } from './economy/workers.js';
 import { populationDay, updateIdlers, housingCap } from './society/population.js';
@@ -104,6 +105,7 @@ function update(dt) {
   updateIdlers(map, dt, requestPath);
   updateAnimals(map, dt, requestPath);
   updateSoldiers(map, dt, requestPath);
+  updateCombat(map, dt);
   growFields();
   updateFires(dt);
 
@@ -117,6 +119,7 @@ function render() {
   const now = performance.now();
   const dtReal = (now - lastFrame) / 1000;
   lastFrame = now;
+  renderer.stepActors(dtReal);
   renderer.draw();
   updateHud(dtReal);
 }

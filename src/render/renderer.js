@@ -8,6 +8,7 @@ import { UnitSheet, ObjectSet, BuildingSprites, AnimalSheets, WallSheet, loadIma
 import { WALL_TYPES, wallMask } from '../world/walls.js';
 import { MOAT_TYPES, moatMask } from '../world/moat.js';
 import { isSelected } from '../military/orders.js';
+import { ActorSheet, dirIndex, stepAnim } from './actorsheet.js';
 import { SPECIES } from '../world/animals.js';
 import { buildMode } from '../ui/buildpanel.js';
 
@@ -31,12 +32,16 @@ export class Renderer {
     this.buildings = new BuildingSprites();
     this.animals = new AnimalSheets();
     this.wallSheet = new WallSheet();
+    // мечник — готовый пак: 16 направлений и свои анимации
+    this.swordsman = new ActorSheet('./assets/sprites/swordsman');
     this.moatSheet = loadImage('./assets/sprites/moat.png').img;
 
     // атлас местности: строка = тип, столбец = вариант
-    const atlasRec = loadImage('./assets/sprites/terrain.png');
+    const atlasRec = loadImage('./assets/sprites/terrain2.png');
     this.tileAtlas = atlasRec.img;
-    atlasRec.ready.then(() => this.buildTerrain());   // перерисовать, когда придёт
+    const edgeRec = loadImage('./assets/sprites/edges.png');
+    this.edgeAtlas = edgeRec.img;
+    Promise.all([atlasRec.ready, edgeRec.ready]).then(() => this.buildTerrain());
 
     this.terrain = document.createElement('canvas');
     this.buildTerrain();
@@ -83,32 +88,44 @@ export class Renderer {
       }
     }
 
-    // 2) размытая кромка: соседние типы вгрызаются друг в друга рваной полосой,
-    //    иначе границы выглядят лестницей из квадратов
-    const hash = (a, b, c) => {
-      let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0;
-      h = (h ^ (h >> 13)) * 1274126177;
-      return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+    // 2) переходы: сосед «главнее» наползает каймой, у воды берег,
+    //    у скалы вертикальная стенка обрыва
+    const edges = this.edgeAtlas;
+    if (!edges || !edges.complete || !edges.naturalWidth) return;
+
+    const ROW_CLIFF = 7, ROW_SHORE = 8;
+    const WATER = 3, ROCK = 2;
+    // кто на кого наползает: чем больше, тем «главнее»
+    const PRIO = [0, 2, 4, 5, 1, 3, 4];
+
+    const nb = (x, y, kind) => {
+      let m = 0;
+      if (this.map.inBounds(x, y - 1) && this.map.tiles[this.map.idx(x, y - 1)] === kind) m |= 1;
+      if (this.map.inBounds(x + 1, y) && this.map.tiles[this.map.idx(x + 1, y)] === kind) m |= 2;
+      if (this.map.inBounds(x, y + 1) && this.map.tiles[this.map.idx(x, y + 1)] === kind) m |= 4;
+      if (this.map.inBounds(x - 1, y) && this.map.tiles[this.map.idx(x - 1, y)] === kind) m |= 8;
+      return m;
     };
-    const DEPTH = [0.62, 0.34, 0.14, 0.05];
 
     for (let y = 0; y < this.map.h; y++) {
       for (let x = 0; x < this.map.w; x++) {
         const mine = this.map.tiles[this.map.idx(x, y)];
-        const color = terrainById(mine).color;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          const nx = x + dx, ny = y + dy;
-          if (!this.map.inBounds(nx, ny)) continue;
-          if (this.map.tiles[this.map.idx(nx, ny)] === mine) continue;
 
-          g.fillStyle = color;
-          for (let d = 0; d < DEPTH.length; d++) {
-            for (let k = 0; k < T; k++) {
-              const px = dx !== 0 ? nx * T + (dx > 0 ? d : T - 1 - d) : nx * T + k;
-              const py = dy !== 0 ? ny * T + (dy > 0 ? d : T - 1 - d) : ny * T + k;
-              if (hash(px, py, d) < DEPTH[d]) g.fillRect(px, py, 1, 1);
-            }
-          }
+        for (let src = 0; src < 7; src++) {
+          if (src === mine || PRIO[src] <= PRIO[mine]) continue;
+          const m = nb(x, y, src);
+          if (m) g.drawImage(edges, m * T, src * T, T, T, x * T, y * T, T, T);
+        }
+
+        if (mine !== WATER) {
+          const m = nb(x, y, WATER);
+          if (m) g.drawImage(edges, m * T, ROW_SHORE * T, T, T, x * T, y * T, T, T);
+        }
+
+        // обрыв рисуется на клетке ПОД скалой
+        if (mine !== ROCK && this.map.inBounds(x, y - 1)
+            && this.map.tiles[this.map.idx(x, y - 1)] === ROCK) {
+          g.drawImage(edges, 1 * T, ROW_CLIFF * T, T, T, x * T, y * T, T, T);
         }
       }
     }
@@ -224,6 +241,31 @@ export class Renderer {
           ctx.fillRect(cx - s2 / 2, p.y - s2 * 3.2, s2, s2);
           ctx.fillStyle = '#f2e8d6';
           ctx.fillRect(cx - 1, p.y - s2 * 3.2 + 2, 2, s2 - 4);
+        }
+      } else if (o.type === 'enemy') {
+        const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
+        const p = cam.worldToScreen(cx, foot);
+        const size = CONFIG.UNIT * cam.zoom;
+        ctx.strokeStyle = 'rgba(226,96,80,0.9)';
+        ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y - 2 * cam.zoom, 11 * cam.zoom, 5 * cam.zoom, 0, 0, 6.3);
+        ctx.stroke();
+        const drawnFoe = o.role === 'swordsman' && this.swordsman.meta
+          ? this.swordsman.draw(ctx, o.animName || 'idle', o.facing | 0,
+                                o.animFrame | 0, p.x, p.y, cam.zoom * 2)
+          : false;
+        if (!drawnFoe) {
+          this.units.draw(ctx, o.role, o.dir, o.frame | 0,
+                          p.x - size / 2, p.y - size, cam.zoom);
+        }
+        if (o.hp < o.maxHp) {
+          const bw = 20 * cam.zoom, bh = Math.max(2, 3 * cam.zoom);
+          const by = p.y - size + 2 * cam.zoom;
+          ctx.fillStyle = 'rgba(20,18,14,0.8)';
+          ctx.fillRect(p.x - bw / 2, by, bw, bh);
+          ctx.fillStyle = '#c0503f';
+          ctx.fillRect(p.x - bw / 2, by, bw * Math.max(0, o.hp / o.maxHp), bh);
         }
       } else if (o.type === 'animal') {
         const sp = SPECIES[o.species];
@@ -345,6 +387,15 @@ Renderer.prototype.drawMoat = function (tl, br) {
     }
   }
 
+  // стрелы
+  for (const sh of state.shots) {
+    const a = cam.worldToScreen((sh.x0 + 0.5) * T, (sh.y0 + 0.4) * T);
+    const b = cam.worldToScreen((sh.x1 + 0.5) * T, (sh.y1 + 0.4) * T);
+    ctx.strokeStyle = 'rgba(240,232,206,0.85)';
+    ctx.lineWidth = Math.max(1, 1.5 * cam.zoom);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+
   // очаги огня поверх рва
   for (const f of state.fires) {
     const p = cam.worldToScreen((f.x + 0.5) * T, (f.y + 0.6) * T);
@@ -353,5 +404,14 @@ Renderer.prototype.drawMoat = function (tl, br) {
     ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.3); ctx.fill();
     ctx.fillStyle = 'rgba(250,204,120,0.85)';
     ctx.beginPath(); ctx.arc(p.x, p.y - r * 0.3, r * 0.5, 0, 6.3); ctx.fill();
+  }
+};
+
+/** Анимации многокадровых актёров крутятся отдельно от логики */
+Renderer.prototype.stepActors = function (dt) {
+  if (!this.swordsman.meta) return;
+  for (const e of state.entities) {
+    if (e.role !== 'swordsman') continue;
+    stepAnim(e, this.swordsman, dt);
   }
 };

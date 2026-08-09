@@ -6,6 +6,7 @@ import { state, addEntity } from '../core/state.js';
 import { events } from '../core/events.js';
 import { takeIdler } from '../society/population.js';
 import { take } from '../economy/storage.js';
+import { dirIndex } from '../render/actorsheet.js';
 
 export let UNITS = {};
 
@@ -72,6 +73,7 @@ export function hire(map, unit) {
     x: spot.x, y: spot.y,
     hp: unit.hp,
     maxHp: unit.hp,
+    facing: 8, animState: 'idle', animName: 'idle', animFrame: 0, animTime: 0,
     speed: unit.speed,
     damage: unit.damage,
     armor: unit.armor,
@@ -92,7 +94,7 @@ export function hire(map, unit) {
 export function army() {
   const out = {};
   for (const e of state.entities) {
-    if (e.type !== 'soldier') continue;
+    if (e.type !== 'soldier' && e.type !== 'enemy') continue;
     out[e.unit] = (out[e.unit] || 0) + 1;
   }
   return out;
@@ -105,7 +107,7 @@ export const armySize = () =>
 /** Пока приказов нет, солдаты топчутся у казармы */
 export function updateSoldiers(map, dt, requestPath) {
   for (const e of state.entities) {
-    if (e.type !== 'soldier') continue;
+    if (e.type !== 'soldier' && e.type !== 'enemy') continue;
 
     if (e.path && e.pathStep < e.path.length) {
       const node = e.path[e.pathStep];
@@ -115,19 +117,23 @@ export function updateSoldiers(map, dt, requestPath) {
       if (dist > 0.001) {
         if (Math.abs(dx) > Math.abs(dy)) e.dir = dx > 0 ? 'right' : 'left';
         else e.dir = dy > 0 ? 'down' : 'up';
+        e.facing = dirIndex(dx, dy);          // 16 направлений для новых спрайтов
       }
       if (dist <= step) { e.x = node.x; e.y = node.y; e.pathStep++; }
       else { e.x += (dx / dist) * step; e.y += (dy / dist) * step; }
       e.anim = (e.anim + step * 4) % CONFIG.UNIT_FRAMES;
       e.frame = Math.floor(e.anim);
+      if (e.animState !== 'attack' && e.animState !== 'death') e.animState = 'walk';
       continue;
     }
     if (e.pathPending) continue;
 
     e.frame = 0;
+    if (e.animState === 'walk') e.animState = 'idle';
 
     // дошёл до места приказа — стоит там, а не бредёт обратно
-    if (e.order === 'move' || e.order === 'post') continue;
+    if (e.order === 'move' || e.order === 'post' || e.order === 'fight') continue;
+    if (e.type === 'enemy') continue;
 
     e.idle -= dt;
     if (e.idle > 0) continue;
@@ -139,4 +145,23 @@ export function updateSoldiers(map, dt, requestPath) {
     const ty = b.y + b.h + ((Math.random() * 5) | 0) - 1;
     if (map.walkable(tx, ty)) requestPath(e, tx, ty);
   }
+}
+
+
+/** Отладочный противник — пока нет ИИ-лорда, врага зовём вручную */
+export function spawnEnemy(map, unitId, x, y) {
+  const u = UNITS[unitId] || UNITS.spearman;
+  if (!map.walkable(x, y)) return null;
+  return addEntity({
+    type: 'enemy',
+    unit: u.id,
+    role: u.sprite,
+    x, y,
+    hp: u.hp, maxHp: u.hp,
+    speed: u.speed, damage: u.damage, armor: u.armor, range: u.range,
+    path: null, pathStep: 0, pathPending: false,
+    dir: 'up', frame: 0, anim: 0,
+    facing: 0, animState: 'idle', animName: 'idle', animFrame: 0, animTime: 0,
+    idle: 0, order: 'stand', target: null, nav: null, cool: 0,
+  });
 }

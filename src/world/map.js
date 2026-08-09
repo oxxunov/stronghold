@@ -4,13 +4,13 @@
 import { CONFIG } from '../config.js';
 
 export const TERRAIN = {
-  GRASS:  { id: 0, name: 'Трава',   color: '#5c7a3d', walk: true,  build: ['farm','any'] },
-  DIRT:   { id: 1, name: 'Земля',   color: '#6b573c', walk: true,  build: ['any'] },
-  ROCK:   { id: 2, name: 'Скала',   color: '#7a7873', walk: false, build: ['quarry'] },
-  WATER:  { id: 3, name: 'Вода',    color: '#24506b', walk: false, build: [] },
-  MARSH:  { id: 4, name: 'Болото',  color: '#4a5340', walk: true,  build: ['pitch'] },
-  FOREST: { id: 5, name: 'Лес',     color: '#24391d', walk: false, build: ['woodcutter'] },
-  ORE:    { id: 6, name: 'Руда',    color: '#8a6b4a', walk: false, build: ['ironmine'] },
+  GRASS:  { id: 0, name: 'Трава',   color: '#74a84c', walk: true,  build: ['farm','any'] },
+  DIRT:   { id: 1, name: 'Земля',   color: '#a68052', walk: true,  build: ['any'] },
+  ROCK:   { id: 2, name: 'Скала',   color: '#949494', walk: false, build: ['quarry'] },
+  WATER:  { id: 3, name: 'Вода',    color: '#3a80ba', walk: false, build: [] },
+  MARSH:  { id: 4, name: 'Болото',  color: '#607848', walk: true,  build: ['pitch'] },
+  FOREST: { id: 5, name: 'Лес',     color: '#487a3a', walk: false, build: ['woodcutter'] },
+  ORE:    { id: 6, name: 'Руда',    color: '#967c5c', walk: false, build: ['ironmine'] },
 };
 
 const BY_ID = Object.values(TERRAIN).sort((a, b) => a.id - b.id);

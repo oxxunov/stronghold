@@ -17,7 +17,9 @@ tiles, decor, MW, MH = world['tiles'], world['decor'], world['w'], world['h']
 
 COL = {0: (92, 122, 61), 1: (124, 100, 68), 2: (128, 126, 120),
        3: (44, 88, 118), 4: (78, 88, 62), 5: (56, 80, 44), 6: (120, 104, 84)}
-ATLAS = Image.open('assets/sprites/terrain.png').convert('RGBA')
+ATLAS = Image.open('assets/sprites/terrain2.png').convert('RGBA')
+EDGES = Image.open('assets/sprites/edges.png').convert('RGBA')
+PRIO = [0, 2, 4, 5, 1, 3, 4]        # кто на кого наползает
 
 img = Image.new('RGB', (SCR_W, SCR_H), (13, 12, 10))
 px = img.load()
@@ -38,6 +40,34 @@ for ty in range(rows):
         v = (mx * 7 + my * 13 + ((mx * my) % 3)) % 4
         tile = ATLAS.crop((v * T, tid * T, (v + 1) * T, (tid + 1) * T))
         img.paste(tile, (tx * T, ty * T))
+
+def nb(mx, my, kind):
+    m = 0
+    if at(mx, my - 1) == kind: m |= 1
+    if at(mx + 1, my) == kind: m |= 2
+    if at(mx, my + 1) == kind: m |= 4
+    if at(mx - 1, my) == kind: m |= 8
+    return m
+
+for ty in range(rows):
+    for tx in range(cols):
+        mx, my = tx + OX, ty + OY
+        mine = at(mx, my)
+        for src in range(7):
+            if src == mine or PRIO[src] <= PRIO[mine]:
+                continue
+            m = nb(mx, my, src)
+            if m:
+                e = EDGES.crop((m * T, src * T, (m + 1) * T, (src + 1) * T))
+                img.paste(e, (tx * T, ty * T), e)
+        if mine != 3:
+            m = nb(mx, my, 3)
+            if m:
+                e = EDGES.crop((m * T, 8 * T, (m + 1) * T, 9 * T))
+                img.paste(e, (tx * T, ty * T), e)
+        if mine != 2 and at(mx, my - 1) == 2:
+            e = EDGES.crop((1 * T, 7 * T, 2 * T, 8 * T))
+            img.paste(e, (tx * T, ty * T), e)
 
 def h32(a, b, c):
     h = (a * 374761393 + b * 668265263 + c * 2147483647) & 0xFFFFFFFF

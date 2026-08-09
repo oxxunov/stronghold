@@ -701,6 +701,80 @@ section('6.98. Приказы отрядам');
   ok(O.selection.size === 0, 'выделение не снялось');
 }
 
+// ======================================================= 6.99 Бой
+section('6.99. Бой');
+{
+  const map = resetState(5555);
+  const O = await load('src/military/orders.js');
+  const C = await load('src/military/combat.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  buildTown(map, ['stockpile', 'granary', 'armoury', 'hovel', 'hovel', 'hovel', 'barracks']);
+  state.resources.gold = 900;
+  state.resources.bread = 400;
+  state.resources.spear = 10;
+  state.resources.bow = 10;
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 4; d++) simDay(map);
+
+  // урон режется бронёй, но не в ноль
+  const dummy = { hp: 100, armor: 4, type: 'enemy' };
+  state.entities.push(dummy);
+  const dealt = C.damage(dummy, 16);
+  ok(dealt === 12, `броня 4 срезала урон 16 до ${dealt} вместо 12`);
+  const dealt2 = C.damage(dummy, 2);
+  ok(dealt2 === 1, `слабый удар по броне дал ${dealt2}, а должен минимум 1`);
+  state.entities.splice(state.entities.indexOf(dummy), 1);
+
+  // рукопашная: копейщик против копейщика — кто-то должен умереть
+  ok(U.hire(map, U.UNITS.spearman).ok, 'копейщик не нанялся');
+  const me = state.entities.find((e) => e.type === 'soldier');
+  const foe = U.spawnEnemy(map, 'spearman', Math.round(me.x) + 2, Math.round(me.y));
+  ok(foe !== null, 'враг не встал на карту');
+
+  let ticks = 0;
+  while (state.entities.includes(me) && state.entities.includes(foe) && ticks < 20 * 120) {
+    state.tick++; PF.processPathQueue(map);
+    U.updateSoldiers(map, 0.05, PF.requestPath);
+    C.updateCombat(map, 0.05);
+    ticks++;
+  }
+  ok(ticks < 20 * 120, 'бой не закончился за две минуты');
+  ok(!state.entities.includes(me) || !state.entities.includes(foe),
+     'оба живы, урон не наносится');
+
+  // стрелок бьёт с дистанции и не сходит с места
+  const map2 = resetState(6666);
+  B.place(map2, B.DEFS.keep, (map2.w >> 1) - 2, (map2.h >> 1) - 2);
+  buildTown(map2, ['stockpile', 'granary', 'armoury', 'hovel', 'hovel', 'barracks']);
+  state.resources.gold = 500; state.resources.bread = 300; state.resources.bow = 5;
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 4; d++) simDay(map2);
+  ok(U.hire(map2, U.UNITS.archer).ok, 'лучник не нанялся');
+  const arch = state.entities.find((e) => e.type === 'soldier' && e.unit === 'archer');
+  arch.order = 'post';
+  const ax = arch.x, ay = arch.y;
+  const target = U.spawnEnemy(map2, 'spearman', Math.round(arch.x) + 4, Math.round(arch.y));
+  if (target) {
+    for (let i = 0; i < 20 * 20; i++) {
+      state.tick++; PF.processPathQueue(map2);
+      U.updateSoldiers(map2, 0.05, PF.requestPath);
+      C.updateCombat(map2, 0.05);
+    }
+    ok(target.hp < target.maxHp || !state.entities.includes(target),
+       'лучник не стрелял по цели в четырёх клетках');
+    ok(Math.abs(arch.x - ax) < 0.5 && Math.abs(arch.y - ay) < 0.5,
+       'лучник на посту сошёл с места');
+  }
+
+  // огонь жжёт того, кто в нём стоит
+  const burner = U.spawnEnemy(map2, 'spearman', Math.round(arch.x) + 6, Math.round(arch.y));
+  if (burner) {
+    const hp0 = burner.hp;
+    state.fires.push({ x: burner.x, y: burner.y, left: 5 });
+    C.updateCombat(map2, 0.5);
+    ok(burner.hp < hp0, 'огонь не наносит урон');
+    state.fires.length = 0;
+  }
+}
+
 // ======================================================= 7. Данные
 section('7. Данные зданий');
 {
