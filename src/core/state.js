@@ -33,6 +33,7 @@ export const state = {
   populationCap: 0,       // мест в лачугах
   ration: 'normal',       // размер пайка
   starving: false,        // еды не хватило на раздачу
+  aleCoverage: 0,         // доля народа, получившего эль
   foodEaten: 0,
   popularity: 55,         // 0..100; ниже 50 люди уходят, выше — приходят
   popularityDelta: 0,     // на сколько сдвинулось в этом месяце

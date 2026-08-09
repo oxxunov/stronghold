@@ -10,6 +10,7 @@ import { refreshAffordable } from './buildpanel.js';
 import { totalPeople, housingCap } from '../society/population.js';
 import { foodStock, daysOfFood, cycleRation, rationById } from '../society/food.js';
 import { cycleTax, taxById, popularityFactors, fearFactor, workRate } from '../society/popularity.js';
+import { aleInInns } from '../society/ale.js';
 
 const $ = (id) => document.getElementById(id);
 let cam = null;
@@ -102,6 +103,11 @@ export function updateHud(dtReal) {
   $('s-gold').textContent = Math.floor(state.resources.gold);
   $('s-pop').textContent = `${totalPeople()}/${housingCap()}`;
   $('workers').textContent = state.entities.filter((e) => e.type === 'worker').length;
+
+  const cov = Math.round((state.aleCoverage || 0) * 100);
+  const al = $('ale');
+  al.textContent = `${cov}% (${Math.round(aleInInns())} б)`;
+  al.className = cov >= 50 ? 'ok' : '';
 
   const ff = fearFactor();
   const fe = $('fear');

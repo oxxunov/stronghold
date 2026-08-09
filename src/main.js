@@ -15,6 +15,8 @@ import { initBuildPanel, tapMap, buildMode } from './ui/buildpanel.js';
 import { assignJobs, updateWorkers, regrowForest, growFields } from './economy/workers.js';
 import { populationDay, updateIdlers, housingCap } from './society/population.js';
 import { feedPeople } from './society/food.js';
+import { serveAle } from './society/ale.js';
+import { populateAnimals, updateAnimals, breedAnimals } from './world/animals.js';
 import { monthlyPopularity } from './society/popularity.js';
 
 const canvas = document.getElementById('game');
@@ -50,6 +52,7 @@ loadBuildings().then(() => {
     if (h) place(map, DEFS.hovel, h.x, h.y);
   }
   state.populationCap = housingCap();
+  populateAnimals(map);   // дичь на лугах у леса
 });
 
 /** Ближайшее к точке место, куда здание влезает: обходим кольцами наружу */
@@ -73,6 +76,7 @@ function update(dt) {
   updateWalkers(map, dt);
   updateWorkers(map, dt);
   updateIdlers(map, dt, requestPath);
+  updateAnimals(map, dt, requestPath);
   growFields();
 
   // наём проверяем раз в секунду, а не каждый тик
@@ -96,10 +100,12 @@ events.on('built', (b) => {
 
 events.on('month', () => {
   regrowForest(map);
+  breedAnimals(map);      // дичь восстанавливается, если её выбили
   monthlyPopularity();     // налоги и пересчёт настроения
 });
 events.on('day', () => {
   feedPeople();          // сначала кормим
+  serveAle();            // потом поим
   populationDay(map);    // потом считаем, кто пришёл и кто ушёл
 });
 

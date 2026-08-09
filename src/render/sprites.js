@@ -114,3 +114,30 @@ export class BuildingSprites {
     if (alpha < 1) ctx.restore();
   }
 }
+
+
+/** Звери из пака CraftPix: кадр 32x32, строки — направления в порядке DIRS */
+export class AnimalSheets {
+  constructor(base = './assets/craftpix/animals') {
+    this.base = base;
+    this.map = new Map();
+  }
+
+  get(file) {
+    if (!this.map.has(file)) this.map.set(file, loadImage(`${this.base}/${file}`).img);
+    return this.map.get(file);
+  }
+
+  draw(ctx, file, dir, index, frames, cx, footY, zoom) {
+    const img = this.get(file);
+    if (!img.complete || !img.naturalWidth) return;
+    const S = 32;
+    const d = UNIT_DIRS.indexOf(dir);
+    const sx = (index % frames) * S;
+    const sy = (d < 0 ? 0 : d) * S;
+    const size = S * zoom;
+    ctx.drawImage(img, sx, sy, S, S,
+                  Math.round(cx - size / 2), Math.round(footY - size),
+                  Math.round(size), Math.round(size));
+  }
+}

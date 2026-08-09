@@ -305,5 +305,136 @@
     ],
     "fear": -4,
     "desc": "Страх −4. Работа кипит, народ бежит."
+  },
+  "hunter": {
+    "name": "Охотничий домик",
+    "category": "farm",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 10
+    },
+    "workers": 1,
+    "output": {
+      "meat": 1
+    },
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Охотник бьёт дичь и несёт мясо в амбар."
+  },
+  "dairy": {
+    "name": "Молочная ферма",
+    "category": "farm",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 15
+    },
+    "workers": 1,
+    "output": {
+      "cheese": 1
+    },
+    "cycle": 36,
+    "terrain": [
+      "grass"
+    ],
+    "desc": "Коровы дают сыр."
+  },
+  "orchard": {
+    "name": "Яблоневый сад",
+    "category": "farm",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 12
+    },
+    "workers": 1,
+    "output": {
+      "apples": 1
+    },
+    "terrain": [
+      "grass"
+    ],
+    "stages": 4,
+    "growTicks": 520,
+    "harvests": 4,
+    "desc": "Яблоки. Зреют дольше пшеницы."
+  },
+  "hopsfarm": {
+    "name": "Хмельник",
+    "category": "farm",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 12
+    },
+    "workers": 1,
+    "output": {
+      "hops": 1
+    },
+    "terrain": [
+      "grass"
+    ],
+    "stages": 4,
+    "growTicks": 300,
+    "harvests": 4,
+    "desc": "Растит хмель для пивоварни."
+  },
+  "brewery": {
+    "name": "Пивоварня",
+    "category": "food",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 20
+    },
+    "workers": 1,
+    "input": {
+      "hops": 1
+    },
+    "output": {
+      "ale": 1
+    },
+    "cycle": 16,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Варит эль из хмеля."
+  },
+  "inn": {
+    "name": "Таверна",
+    "category": "town",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 25,
+      "gold": 10
+    },
+    "workers": 1,
+    "input": {
+      "ale": 1
+    },
+    "cycle": 16,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "serves": true,
+    "desc": "Поит народ. Одна таверна на 20 человек."
   }
 }

@@ -4,7 +4,7 @@
 import { state } from '../core/state.js';
 import { events } from '../core/events.js';
 
-export const RAW = ['wood', 'stone', 'iron', 'pitch', 'wheat', 'flour', 'hops'];
+export const RAW = ['wood', 'stone', 'iron', 'pitch', 'wheat', 'flour', 'hops', 'ale'];
 export const FOOD = ['bread', 'meat', 'cheese', 'apples'];
 
 /** Куда нести этот ресурс */

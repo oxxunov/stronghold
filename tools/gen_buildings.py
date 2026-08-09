@@ -594,6 +594,201 @@ def gallows():
     return cv.im
 
 
+# ------------------------------------------------------------- этап 5.1
+def hunter():
+    """Охотничий домик: сруб с оленьими рогами и сушилкой. 2x2."""
+    im = house(2, 2, WOOD, 'wood', THATCH, 'thatch', door=True, windows=1, seed=11)
+    cv = Canvas(im.width, im.height)
+    cv.im = im.copy()
+    cv.d = ImageDraw.Draw(cv.im)
+    W = im.width
+    # рога над дверью
+    cx = W // 2
+    top = im.height - 30
+    for side in (-1, 1):
+        for i in range(6):
+            cv.px(cx + side * (2 + i), top - i, (218, 206, 178))
+            if i % 2 == 0:
+                cv.px(cx + side * (2 + i), top - i - 3, (218, 206, 178))
+                cv.px(cx + side * (2 + i), top - i - 2, (218, 206, 178))
+    # сушилка для шкур сбоку
+    cv.rect(2, im.height - 26, 4, im.height - 4, mix(WOOD, 0.8))
+    cv.rect(2, im.height - 26, 14, im.height - 24, mix(WOOD, 0.9))
+    cv.rect(4, im.height - 24, 13, im.height - 12, (150, 116, 84))
+    cv.rect(4, im.height - 24, 13, im.height - 22, (176, 142, 106))
+    return cv.im
+
+
+def dairy():
+    """Молочная ферма: хлев и загон с коровами. 3x3."""
+    tw = th = 3
+    W, Hh = tw * T, th * T + 40
+    cv = Canvas(W, Hh)
+    top = Hh - th * T
+
+    # выгон
+    for y in range(top + 20, Hh):
+        for x in range(W):
+            cv.px(x, y, mix((104, 134, 70), 0.94 + h(x, y, 6) * 0.14))
+    # изгородь
+    for x in range(0, W, 8):
+        cv.rect(x, Hh - 20, x + 1, Hh - 6, mix(WOOD, 0.9))
+    cv.rect(0, Hh - 18, W - 1, Hh - 16, WOOD)
+    cv.rect(0, Hh - 11, W - 1, Hh - 9, mix(WOOD, 0.86))
+
+    # хлев
+    barn = house(3, 1, WOOD, 'wood', THATCH, 'thatch', door=True, windows=2, seed=12)
+    cv.im.paste(barn, (0, top + 20 - barn.height), barn)
+    cv.d = ImageDraw.Draw(cv.im)
+
+    # две коровы
+    for (cx, cy) in ((16, Hh - 14), (60, Hh - 10)):
+        cv.rect(cx, cy - 8, cx + 16, cy, (238, 236, 230))          # туловище
+        for (px, py) in ((cx + 2, cy - 7), (cx + 9, cy - 5), (cx + 5, cy - 3)):
+            cv.rect(px, py, px + 4, py + 3, (58, 52, 48))          # пятна
+        cv.rect(cx + 15, cy - 11, cx + 19, cy - 6, (238, 236, 230))  # голова
+        cv.px(cx + 19, cy - 10, (48, 42, 38))
+        for lx in (cx + 2, cx + 12):                                # ноги
+            cv.rect(lx, cy, lx + 1, cy + 4, (196, 192, 186))
+    cv.outline()
+    return cv.im
+
+
+def orchard(stage=3):
+    """Яблоневый сад, 3x3. Стадии: голые деревья → цвет → завязь → яблоки."""
+    tw = th = 3
+    W, Hh = tw * T, th * T + 20
+    cv = Canvas(W, Hh)
+    top = Hh - th * T
+    for y in range(top, Hh):
+        for x in range(W):
+            cv.px(x, y, mix((100, 128, 66), 0.94 + h(x, y, 9) * 0.14))
+
+    crown = {0: (96, 84, 58), 1: (128, 156, 92), 2: (96, 140, 74), 3: (88, 132, 70)}[stage]
+    for (cx, cy) in ((18, top + 22), (50, top + 16), (34, top + 52), (70, top + 46)):
+        cv.rect(cx - 1, cy, cx + 1, cy + 12, mix(WOOD, 0.82))       # ствол
+        for dy in range(-9, 6):
+            for dx in range(-10, 11):
+                if dx * dx * 1.2 + dy * dy > 90:
+                    continue
+                c = mix(crown, 1.06 if dy < -3 else (0.86 if dy > 2 else 1.0))
+                cv.px(cx + dx, cy + dy, c)
+        if stage == 1:                                              # цветение
+            for i in range(6):
+                cv.px(cx - 6 + i * 3, cy - 6 + (i % 3), (238, 220, 228))
+        if stage >= 2:                                              # плоды
+            n = 3 if stage == 2 else 6
+            col = (176, 150, 72) if stage == 2 else (198, 68, 56)
+            for i in range(n):
+                px = cx - 7 + (i * 5) % 15
+                py = cy - 5 + ((i * 7) % 9)
+                cv.px(px, py, col)
+                cv.px(px + 1, py, mix(col, 1.2))
+    cv.outline()
+    return cv.im
+
+
+# --------------------------------------------------------------- этап 5.2
+def hopsfarm(stage=3):
+    """Хмельник: шпалеры с лозой, 3x3. Стадии — от голых жердей до шишек."""
+    tw = th = 3
+    W, Hh = tw * T, th * T + 26
+    cv = Canvas(W, Hh)
+    top = Hh - th * T
+    for y in range(top, Hh):
+        for x in range(W):
+            cv.px(x, y, mix((118, 104, 70), 0.94 + h(x, y, 12) * 0.14))
+
+    # верхняя проволока между жердями
+    cv.rect(8, top - 12, W - 8, top - 12, mix(WOOD, 0.7))
+
+    rows = [10, 34, 58, 82]
+    for rx in rows:
+        if rx >= W - 4:
+            continue
+        # жердь
+        cv.rect(rx, top - 14, rx + 1, Hh - 6, mix(WOOD, 0.86))
+        cv.px(rx, top - 14, mix(WOOD, 1.2))
+        if stage == 0:
+            continue
+        hgt = {1: 34, 2: 62, 3: 92}[stage]
+        col = {1: (128, 158, 84), 2: (108, 146, 72), 3: (98, 138, 68)}[stage]
+        for i in range(hgt):
+            y = Hh - 8 - i
+            w = 2 if i < hgt - 6 else 1
+            for dx in range(-w, w + 1):
+                if (i + dx) % 3 == 0:
+                    cv.px(rx + dx, y, mix(col, 1.10))
+                else:
+                    cv.px(rx + dx, y, col)
+        if stage == 3:                       # шишки хмеля
+            for i in range(9):
+                cv.px(rx - 2 + (i % 3), Hh - 20 - i * 9, (206, 208, 148))
+                cv.px(rx - 1 + (i % 3), Hh - 19 - i * 9, (178, 186, 122))
+    cv.outline()
+    return cv.im
+
+
+def _barrel(cv, x, y, w=10, hh=13):
+    """Бочка — пригодится и пивоварне, и таверне."""
+    cv.rect(x, y, x + w, y + hh, mix(WOOD, 0.88))
+    cv.rect(x + 1, y, x + w - 1, y, mix(WOOD, 1.16))
+    for by in (y + 3, y + hh - 4):
+        cv.rect(x, by, x + w, by + 1, mix((96, 86, 70), 1.0))
+    cv.rect(x + w // 2 - 1, y + 1, x + w // 2, y + hh - 1, mix(WOOD, 1.06))
+
+
+def brewery():
+    """Пивоварня: дом с чаном и бочками во дворе. 3x3."""
+    im = house(3, 3, PLASTER, 'plaster', TILE_R, 'tile', door=True, windows=2,
+               chimney=True, seed=14)
+    cv = Canvas(im.width, im.height + 16)
+    cv.im.paste(im, (0, 0), im)
+    cv.d = ImageDraw.Draw(cv.im)
+    base = im.height + 15
+    # двор с бочками
+    for y in range(im.height - 2, base + 1):
+        for x in range(cv.w):
+            cv.px(x, y, mix((132, 122, 104), 0.92 + h(x, y, 3) * 0.16))
+    _barrel(cv, 4, base - 14)
+    _barrel(cv, 17, base - 12, 9, 11)
+    _barrel(cv, cv.w - 16, base - 14)
+    # чан у стены
+    cv.d.ellipse([cv.w // 2 - 9, base - 16, cv.w // 2 + 9, base - 4],
+                 fill=(*mix((104, 96, 82), 1.0), 255))
+    cv.d.ellipse([cv.w // 2 - 7, base - 14, cv.w // 2 + 7, base - 7],
+                 fill=(*(146, 116, 54), 255))
+    cv.outline()
+    return cv.im
+
+
+def inn():
+    """Таверна: дом с вывеской, кружкой на щите и бочками. 3x3."""
+    im = house(3, 3, PLASTER, 'plaster', THATCH, 'thatch', door=True, windows=3,
+               chimney=True, seed=15, storeys=2)
+    cv = Canvas(im.width + 14, im.height + 14)
+    cv.im.paste(im, (0, 14), im)
+    cv.d = ImageDraw.Draw(cv.im)
+    W, Hh = cv.w, cv.h
+
+    # кронштейн с вывеской
+    sx = im.width - 6
+    cv.rect(sx, 20, sx + 12, 21, mix(WOOD, 0.8))
+    cv.rect(sx + 11, 21, sx + 12, 26, mix(WOOD, 0.7))
+    cv.rect(sx + 5, 26, sx + 13, 38, mix(WOOD, 0.92))
+    cv.rect(sx + 6, 27, sx + 12, 37, (188, 156, 92))
+    # кружка на вывеске
+    cv.rect(sx + 8, 30, sx + 11, 35, (232, 226, 208))
+    cv.rect(sx + 8, 30, sx + 11, 31, (246, 242, 230))
+    cv.px(sx + 11, 32, (140, 120, 80))
+
+    # бочки у входа
+    _barrel(cv, 3, Hh - 16, 9, 12)
+    _barrel(cv, 14, Hh - 14, 8, 10)
+    cv.outline()
+    return cv.im
+
+
 BUILDINGS = {
     'keep':       ('Донжон',          keep),
     'hovel':      ('Лачуга',          lambda: house(2, 2, PLASTER, 'plaster', THATCH, 'thatch', True, 1, False, 1)),
@@ -604,6 +799,12 @@ BUILDINGS = {
     'bakery':     ('Пекарня',         lambda: house(3, 3, PLASTER, 'plaster', TILE_R, 'tile', True, 2, True, 4, storeys=2)),
     'stockpile':  ('Склад',           stockpile),
     'granary':    ('Амбар',           lambda: house(3, 3, WOOD, 'wood', THATCH, 'thatch', True, 1, False, 5)),
+    'hunter':     ('Охотничий домик', hunter),
+    'hopsfarm':   ('Хмельник',        hopsfarm),
+    'brewery':    ('Пивоварня',       brewery),
+    'inn':        ('Таверна',         inn),
+    'dairy':      ('Молочная ферма', dairy),
+    'orchard':    ('Яблоневый сад',  orchard),
     'garden':     ('Сад',             garden),
     'statue':     ('Статуя',          statue),
     'fountain':   ('Фонтан',          fountain),
@@ -624,6 +825,8 @@ def build(outdir='assets/sprites/buildings'):
     # стадии роста поля отдельными файлами: wheatfarm_0 .. wheatfarm_3
     for st in range(4):
         farm(st).save(f'{outdir}/wheatfarm_{st}.png')
+        orchard(st).save(f'{outdir}/orchard_{st}.png')
+        hopsfarm(st).save(f'{outdir}/hopsfarm_{st}.png')
     return sizes
 
 

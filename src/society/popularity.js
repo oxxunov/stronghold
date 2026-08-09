@@ -9,6 +9,7 @@ import { state } from '../core/state.js';
 import { events } from '../core/events.js';
 import { totalPeople } from './population.js';
 import { foodPopularity } from './food.js';
+import { alePopularity } from './ale.js';
 
 export const TAXES = [
   { id: 'gift3', name: 'Раздача ×3',    gold: -1.6, popularity: 7 },
@@ -50,10 +51,11 @@ export function workRate() {
 /** Разбивка факторов — её же показываем игроку в советнике */
 export function popularityFactors() {
   const food = foodPopularity();
+  const ale = alePopularity();
   const tax = taxById(state.tax).popularity;
   const fear = fearFactor() * 2;                 // −5 → −10, +5 → +10
   const crowding = state.populationCap > 0 && totalPeople() > state.populationCap ? -6 : 0;
-  return { food, tax, fear, crowding, total: food + tax + fear + crowding };
+  return { food, ale, tax, fear, crowding, total: food + ale + tax + fear + crowding };
 }
 
 /** Месячный расчёт: собираем налог и двигаем популярность */

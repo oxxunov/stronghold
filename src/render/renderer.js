@@ -4,7 +4,8 @@
 import { CONFIG } from '../config.js';
 import { state } from '../core/state.js';
 import { terrainById } from '../world/map.js';
-import { UnitSheet, ObjectSet, BuildingSprites, loadImage, TREES, ROCKS, BUSHES } from './sprites.js';
+import { UnitSheet, ObjectSet, BuildingSprites, AnimalSheets, loadImage, TREES, ROCKS, BUSHES } from './sprites.js';
+import { SPECIES } from '../world/animals.js';
 import { buildMode } from '../ui/buildpanel.js';
 
 const CARRY_COLOR = {
@@ -25,6 +26,7 @@ export class Renderer {
     this.rocks = new ObjectSet('./assets/craftpix/rocks', ROCKS);
     this.bushes = new ObjectSet('./assets/craftpix/bushes', BUSHES);
     this.buildings = new BuildingSprites();
+    this.animals = new AnimalSheets();
 
     // атлас местности: строка = тип, столбец = вариант
     const atlasRec = loadImage('./assets/sprites/terrain.png');
@@ -200,6 +202,11 @@ export class Renderer {
           ctx.fillStyle = '#f2e8d6';
           ctx.fillRect(cx - 1, p.y - s2 * 3.2 + 2, 2, s2 - 4);
         }
+      } else if (o.type === 'animal') {
+        const sp = SPECIES[o.species];
+        const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
+        const p = cam.worldToScreen(cx, foot);
+        this.animals.draw(ctx, sp.file, o.dir, o.frame | 0, sp.frames, p.x, p.y, cam.zoom);
       } else if (o.kind) {
         const cx = (o.x + 0.5) * T, foot = (o.y + 1) * T;
         const p = cam.worldToScreen(cx, foot);

@@ -11,16 +11,20 @@ import { state, addEntity } from '../core/state.js';
 import { events } from '../core/events.js';
 import { requestPath, requestPathAny } from '../world/pathfinding.js';
 import { TERRAIN } from '../world/map.js';
+import { killAnimal } from '../world/animals.js';
 import { storeFor, deposit, take, has } from './storage.js';
 import { takeIdler } from '../society/population.js';
 import { workRate } from '../society/popularity.js';
 
-const WORK_TIME = { chop: 3.0, mine: 4.0, farm: 2.5 };
+const WORK_TIME = { chop: 3.0, mine: 4.0, farm: 2.5, hunt: 4.0 };
 const craftTime = (def) => (def.cycle || 20) / 4 / workRate();
 
 const JOB_BY_BUILDING = {
-  woodcutter: 'chop', quarry: 'mine', wheatfarm: 'farm',
-  mill: 'craft', bakery: 'craft',
+  woodcutter: 'chop', quarry: 'mine',
+  wheatfarm: 'farm', orchard: 'farm', hopsfarm: 'farm',
+  hunter: 'hunt',
+  mill: 'craft', bakery: 'craft', dairy: 'craft',
+  brewery: 'craft', inn: 'craft',
 };
 
 // ------------------------------------------------------------- навигация
@@ -129,6 +133,17 @@ function findRock(map, b, maxR = 12) {
       const dist = Math.abs(x - b.x) + Math.abs(y - b.y);
       if (dist < bestD) { bestD = dist; best = { x, y }; }
     }
+  }
+  return best;
+}
+
+/** Ближайший непомеченный зверь в радиусе охоты */
+function findAnimal(map, b, maxR = 20) {
+  let best = null, bestD = Infinity;
+  for (const e of state.entities) {
+    if (e.type !== 'animal' || e.taken) continue;
+    const d = Math.abs(e.x - b.x) + Math.abs(e.y - b.y);
+    if (d < bestD && d <= maxR) { bestD = d; best = e; }
   }
   return best;
 }
@@ -245,6 +260,15 @@ function updateGatherer(map, e, dt) {
         if (!spot) { stall(e, 2); return; }
         e.source = spot;
       }
+    } else if (e.job === 'hunt') {
+      if (!e.source) {
+        const prey = findAnimal(map, e.home);
+        if (!prey) { stall(e, 3); return; }
+        prey.taken = true;
+        e.source = prey;
+      }
+      // зверь ходит, поэтому цель обновляем на лету
+      if (!state.entities.includes(e.source)) { e.source = null; stall(e, 1); return; }
     } else if (!e.source) {
       const src = e.job === 'chop' ? findTree(map, e.home) : findRock(map, e.home);
       if (!src) { stall(e, 2); return; }
@@ -252,10 +276,10 @@ function updateGatherer(map, e, dt) {
       e.source = src;
     }
 
-    const r = navToTile(map, e, e.source.x, e.source.y);
+    const r = navToTile(map, e, Math.round(e.source.x), Math.round(e.source.y));
     if (r === 'moving') return;
     if (r === 'failed') {
-      if (e.job === 'chop' && e.source) e.source.taken = false;
+      if (e.source && (e.job === 'chop' || e.job === 'hunt')) e.source.taken = false;
       stall(e, 2);
       return;
     }
@@ -273,8 +297,14 @@ function updateGatherer(map, e, dt) {
     }
     if (e.timer > 0) return;
 
-    if (e.job === 'farm') {
-      e.carry = { res: 'wheat', n: 1 };
+    if (e.job === 'hunt') {
+      if (!e.source || !state.entities.includes(e.source)) { e.source = null; stall(e, 1); return; }
+      const meat = killAnimal(e.source);
+      e.carry = { res: 'meat', n: meat };
+    } else if (e.job === 'farm') {
+      // что именно растёт, берём из данных здания: пшеница или яблоки
+      const res = Object.keys(e.home.def.output || { wheat: 1 })[0];
+      e.carry = { res, n: 1 };
       e.home.harvestsLeft = Math.max(0, (e.home.harvestsLeft || 0) - 1);
       if (!e.home.harvestsLeft) { e.home.growth = 0; e.home.growTimer = 0; }
     } else if (e.job === 'chop') {
@@ -338,6 +368,12 @@ function updateCrafter(map, e, dt) {
   if (e.phase === 'working') {
     e.timer -= dt;
     if (e.timer > 0) return;
+    // таверна ничего не производит: бочка просто встаёт в её погреб
+    if (def.serves) {
+      e.home.ale = (e.home.ale || 0) + 1;
+      e.phase = 'toSource';
+      return;
+    }
     const outRes = Object.keys(def.output || {})[0];
     const outAmt = (def.output || {})[outRes] || 1;
     e.carry = outRes ? { res: outRes, n: outAmt } : null;

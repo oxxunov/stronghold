@@ -77,6 +77,10 @@ export function checkPlace(map, def, tx, ty) {
   const blocked = blocksNeighbour(map, tx, ty, w, h);
   if (blocked) return { ok: false, reason: `Перекроет вход: ${blocked.def.name}` };
 
+  // и не должна отрезать часть замка от донжона
+  const cut = cutsOff(map, tx, ty, w, h);
+  if (cut) return { ok: false, reason: `Отрежет путь: ${cut.def.name}` };
+
   if (!canAfford(def)) return { ok: false, reason: 'Не хватает ресурсов' };
 
   return { ok: true };
@@ -110,6 +114,71 @@ export function blocksNeighbour(map, tx, ty, w, h) {
     if (b.x > tx + w + 1 || b.x + b.w < tx - 1) continue;
     if (b.y > ty + h + 1 || b.y + b.h < ty - 1) continue;
     if (!hasApproach(map, b.x, b.y, b.w, b.h)) { bad = b; break; }
+  }
+
+  for (const i of cells) map.occupied[i] = 0;
+  return bad;
+}
+
+/** Заливка проходимых клеток от точки — что вообще достижимо */
+function floodFrom(map, sx, sy) {
+  const seen = new Uint8Array(map.w * map.h);
+  if (!map.walkable(sx, sy)) return seen;
+  const q = [sy * map.w + sx];
+  seen[q[0]] = 1;
+  for (let head = 0; head < q.length; head++) {
+    const i = q[head];
+    const x = i % map.w, y = (i / map.w) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (!map.inBounds(nx, ny)) continue;
+      const ni = ny * map.w + nx;
+      if (seen[ni] || !map.walkable(nx, ny)) continue;
+      seen[ni] = 1;
+      q.push(ni);
+    }
+  }
+  return seen;
+}
+
+/**
+ * Не отрежет ли новая постройка часть замка от донжона.
+ * Без этой проверки игрок случайно строит стену из домов, и рабочие
+ * по ту сторону навсегда встают с грузом в руках.
+ */
+export function cutsOff(map, tx, ty, w, h) {
+  const keep = state.buildings.find((b) => b.def.id === 'keep');
+  if (!keep) return null;
+
+  const cells = [];
+  for (let y = ty; y < ty + h; y++)
+    for (let x = tx; x < tx + w; x++) {
+      const i = map.idx(x, y);
+      if (!map.occupied[i]) { map.occupied[i] = 1; cells.push(i); }
+    }
+
+  const start = approachOf(map, keep, keep.x, keep.y);
+  let bad = null;
+  if (start) {
+    const seen = floodFrom(map, start.x, start.y);
+    const reachable = (b) => {
+      for (let x = b.x - 1; x <= b.x + b.w; x++) {
+        if (map.inBounds(x, b.y - 1) && seen[map.idx(x, b.y - 1)]) return true;
+        if (map.inBounds(x, b.y + b.h) && seen[map.idx(x, b.y + b.h)]) return true;
+      }
+      for (let y = b.y - 1; y <= b.y + b.h; y++) {
+        if (map.inBounds(b.x - 1, y) && seen[map.idx(b.x - 1, y)]) return true;
+        if (map.inBounds(b.x + b.w, y) && seen[map.idx(b.x + b.w, y)]) return true;
+      }
+      return false;
+    };
+    for (const b of state.buildings) {
+      if (b === keep) continue;
+      if (!reachable(b)) { bad = b; break; }
+    }
+    // и само новое здание должно быть достижимо
+    if (!bad && !reachable({ x: tx, y: ty, w, h, def: { name: 'новое здание' } }))
+      bad = { def: { name: 'само это здание' } };
   }
 
   for (const i of cells) map.occupied[i] = 0;
