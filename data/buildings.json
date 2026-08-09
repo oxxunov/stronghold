@@ -1,0 +1,309 @@
+{
+  "keep": {
+    "name": "Донжон",
+    "category": "castle",
+    "size": [
+      5,
+      5
+    ],
+    "cost": {},
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "unique": true,
+    "desc": "Дом лорда. Разрушен — конец игре."
+  },
+  "stockpile": {
+    "name": "Склад",
+    "category": "castle",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {},
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Хранит дерево, камень, железо и смолу."
+  },
+  "granary": {
+    "name": "Амбар",
+    "category": "food",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 8
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Хранит еду, отсюда идёт раздача."
+  },
+  "hovel": {
+    "name": "Лачуга",
+    "category": "town",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 6
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Жильё на 8 человек. Нет лачуг — люди не приходят."
+  },
+  "woodcutter": {
+    "name": "Лесопилка",
+    "category": "industry",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 3
+    },
+    "workers": 1,
+    "output": {
+      "wood": 1
+    },
+    "cycle": 25,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "nearForest": true,
+    "desc": "Рубит лес. Ставить у деревьев."
+  },
+  "quarry": {
+    "name": "Каменоломня",
+    "category": "industry",
+    "size": [
+      4,
+      4
+    ],
+    "cost": {
+      "wood": 20
+    },
+    "workers": 3,
+    "output": {
+      "stone": 1
+    },
+    "cycle": 30,
+    "terrain": [
+      "rock"
+    ],
+    "desc": "Добывает камень. Только на скале."
+  },
+  "wheatfarm": {
+    "name": "Пшеничная ферма",
+    "category": "farm",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 15
+    },
+    "workers": 1,
+    "output": {
+      "wheat": 1
+    },
+    "cycle": 40,
+    "terrain": [
+      "grass"
+    ],
+    "desc": "Растит пшеницу. Только на траве.",
+    "stages": 4,
+    "growTicks": 420,
+    "harvests": 3
+  },
+  "mill": {
+    "name": "Мельница",
+    "category": "food",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 20
+    },
+    "workers": 2,
+    "input": {
+      "wheat": 1
+    },
+    "output": {
+      "flour": 1
+    },
+    "cycle": 20,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Мелет пшеницу в муку."
+  },
+  "bakery": {
+    "name": "Пекарня",
+    "category": "food",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 10
+    },
+    "workers": 1,
+    "input": {
+      "flour": 1
+    },
+    "output": {
+      "bread": 2
+    },
+    "cycle": 12,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Печёт хлеб из муки."
+  },
+  "barracks": {
+    "name": "Казарма",
+    "category": "military",
+    "size": [
+      4,
+      3
+    ],
+    "cost": {
+      "wood": 20,
+      "stone": 10
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Найм войск: человек + оружие + золото."
+  },
+  "garden": {
+    "name": "Сад",
+    "category": "town",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "gold": 5
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "fear": 2,
+    "desc": "Радует народ. +2 к радости."
+  },
+  "statue": {
+    "name": "Статуя",
+    "category": "town",
+    "size": [
+      1,
+      1
+    ],
+    "cost": {
+      "gold": 10,
+      "stone": 10
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "fear": 1,
+    "desc": "Памятник лорду. +1 к радости."
+  },
+  "fountain": {
+    "name": "Фонтан",
+    "category": "town",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "gold": 20,
+      "stone": 20
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "fear": 3,
+    "desc": "Роскошь. +3 к радости."
+  },
+  "stocks": {
+    "name": "Позорный столб",
+    "category": "town",
+    "size": [
+      1,
+      1
+    ],
+    "cost": {
+      "wood": 5
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "fear": -1,
+    "desc": "Страх −1. Работают быстрее, но злее."
+  },
+  "cage": {
+    "name": "Клетка",
+    "category": "town",
+    "size": [
+      1,
+      1
+    ],
+    "cost": {
+      "wood": 10,
+      "iron": 2
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "fear": -2,
+    "desc": "Страх −2."
+  },
+  "gallows": {
+    "name": "Виселица",
+    "category": "town",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 20
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "fear": -4,
+    "desc": "Страх −4. Работа кипит, народ бежит."
+  }
+}
