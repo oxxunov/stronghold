@@ -17,6 +17,8 @@ jobs:
           java-version: '17'
 
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
       # игра лежит в корне репозитория; кладём её в assets/www,
       # исключая всё, что в приложении не нужно
@@ -31,7 +33,9 @@ jobs:
             --exclude '*.md' \
             --exclude '*.zip' \
             ./ android/app/src/main/assets/www/
+          echo "--- что попало в assets ---"
           du -sh android/app/src/main/assets/www
+          ls android/app/src/main/assets/www
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -39,7 +43,27 @@ jobs:
 
       - name: Сборка debug APK
         working-directory: android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee ../build.log
+
+      # если упало — показываем только суть, без километра лицензий
+      - name: Что пошло не так
+        if: failure()
+        run: |
+          echo "════════ ГЛАВНОЕ ════════"
+          grep -n -A 25 "What went wrong" build.log || true
+          echo "════════ ОШИБКИ КОМПИЛЯЦИИ ════════"
+          grep -n -E "^e: |error:|ERROR:|Caused by" build.log | head -40 || true
+          echo "════════ ПОСЛЕДНИЕ 40 СТРОК ════════"
+          tail -40 build.log
+
+      - name: Приложить полный лог
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
 
       - name: Переименовать по версии
         run: |

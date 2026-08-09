@@ -12,5 +12,11 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+plugins {
+    // версия плагина объявлена здесь, а не в подпроекте:
+    // иначе Gradle ругается на повторное объявление на classpath
+    id 'com.android.application' version '8.5.2' apply false
+}
+
 rootProject.name = "Stronghold"
 include ':app'
