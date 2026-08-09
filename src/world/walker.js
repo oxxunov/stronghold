@@ -11,12 +11,17 @@ import { dirIndex } from '../render/actorsheet.js';
 // пока не построишь казарму и не наберёшь снаряжение
 const TEST_ROLES = [...UNIT_ROLES, 'swordsman'];
 
-export function spawnWalkers(map, count) {
+/** Призвать только мечников — чтобы проверить пак, не разводя толпу */
+export function spawnSwordsmen(map, count) {
+  spawnWalkers(map, count, 'swordsman');
+}
+
+export function spawnWalkers(map, count, forceRole = null) {
   for (let i = 0; i < count; i++) {
     const p = map.randomWalkable();
     addEntity({
       type: 'walker',
-      role: TEST_ROLES[i % TEST_ROLES.length],
+      role: forceRole || TEST_ROLES[i % TEST_ROLES.length],
       x: p.x, y: p.y,
       speed: 1.4 + Math.random() * 1.2,   // клеток в секунду
       path: null,

@@ -23,16 +23,32 @@ export class ActorSheet {
     this.base = base;
     this.meta = null;
     this.sheets = {};
+    this.loaded = 0;
+    this.total = 0;
+    this.error = null;
+
     this.ready = fetch(`${base}/meta.json`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`meta.json: ${r.status}`);
+        return r.json();
+      })
       .then((m) => {
         this.meta = m;
-        for (const name of Object.keys(m.anims)) {
-          this.sheets[name] = loadImage(`${base}/${name}.png`).img;
+        const names = Object.keys(m.anims);
+        this.total = names.length;
+        for (const name of names) {
+          const rec = loadImage(`${base}/${name}.png`);
+          this.sheets[name] = rec.img;
+          rec.ready.then((img) => { if (img) this.loaded++; });
         }
+        console.log('[мечник] атласов заявлено:', this.total);
         return m;
       })
-      .catch(() => null);
+      .catch((err) => {
+        this.error = String(err.message || err);
+        console.warn('[мечник] не загрузился:', this.error, '->', `${base}/meta.json`);
+        return null;
+      });
   }
 
   frames(anim) {

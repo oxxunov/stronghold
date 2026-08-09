@@ -196,6 +196,5 @@ events.on('day', () => {
 
 start(update, render);
 
-if (CONFIG.DEBUG) {
-  window.SH = { state, map, camera, renderer, events, CONFIG, DEFS };
-}
+// доступ из консоли и для строки состояния в интерфейсе
+window.SH = { state, map, camera, renderer, events, CONFIG, DEFS };

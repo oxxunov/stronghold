@@ -5,7 +5,7 @@ import { MONTHS } from '../config.js';
 import { state, clearEntities } from '../core/state.js';
 import { getFps } from '../core/loop.js';
 import { takePathStat, clearQueue } from '../world/pathfinding.js';
-import { spawnWalkers } from '../world/walker.js';
+import { spawnWalkers, spawnSwordsmen } from '../world/walker.js';
 import { refreshAffordable } from './buildpanel.js';
 import { totalPeople, housingCap } from '../society/population.js';
 import { foodStock, daysOfFood, cycleRation, rationById } from '../society/food.js';
@@ -85,6 +85,7 @@ export function initHud(camera, map) {
 
   $('b-spawn100').onclick = () => spawnWalkers(map, 100);
   $('b-spawn500').onclick = () => spawnWalkers(map, 500);
+  $('b-spawn-sword').onclick = () => spawnSwordsmen(map, 10);
   $('b-clear').onclick = () => { clearEntities(); clearQueue(); };
   $('b-center').onclick = () => camera.center();
 }
@@ -131,6 +132,15 @@ export function updateHud(dtReal) {
   fe.textContent = ff > 0 ? `+${ff} радость` : (ff < 0 ? `${ff} страх` : '0');
   fe.className = ff > 0 ? 'ok' : (ff < 0 ? 'bad' : '');
   $('rate').textContent = workRate().toFixed(2);
+
+  // состояние пака мечника — видно сразу, грузится он или нет
+  const sw = window.SH && window.SH.renderer ? window.SH.renderer.swordsman : null;
+  const st = $('swstat');
+  if (st && sw) {
+    if (sw.error) { st.textContent = 'ошибка'; st.className = 'bad'; }
+    else if (!sw.meta) { st.textContent = 'грузится'; st.className = ''; }
+    else { st.textContent = `${sw.loaded}/${sw.total}`; st.className = sw.loaded >= sw.total ? 'ok' : ''; }
+  }
 
   const mood = $('s-pop-mood');
   const f = popularityFactors();
