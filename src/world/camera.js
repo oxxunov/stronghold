@@ -12,6 +12,7 @@ export class Camera {
     this.y = (map.h * CONFIG.TILE) / 2;
 
     this.pointers = new Map();
+    this.lockDrag = null;   // если вернёт true, одним пальцем карту не двигаем
     this.pinchDist = 0;
     this.pinchZoom = 1;
     this.moved = false;
@@ -87,6 +88,7 @@ export class Camera {
       if (!p) return;
 
       if (this.pointers.size === 1) {
+        if (this.lockDrag && this.lockDrag()) { p.x = e.clientX; p.y = e.clientY; return; }
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         if (Math.abs(dx) + Math.abs(dy) > 3) this.moved = true;
         this.x -= dx / this.zoom;

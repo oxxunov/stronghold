@@ -22,7 +22,10 @@ export const state = {
   // --- Ресурсы ---
   resources: {
     wood: 100, stone: 50, iron: 0, pitch: 0, gold: 200,
-    wheat: 0, flour: 0, bread: 0, meat: 0, cheese: 0, apples: 0, ale: 0
+    wheat: 0, flour: 0, bread: 0, meat: 0, cheese: 0, apples: 0, ale: 0, hops: 0,
+    // оружие и доспехи лежат в арсенале
+    bow: 0, crossbow: 0, spear: 0, pike: 0, sword: 0, mace: 0,
+    leatherarmour: 0, metalarmour: 0
   },
 
   // --- Постройки ---

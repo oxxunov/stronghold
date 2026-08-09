@@ -99,6 +99,24 @@ BUILD = [('keep', 15, 20, 5, 5), ('stockpile', 21, 22, 3, 3),
          ('barracks', 11, 32, 4, 3)]
 BSPR = {b: Image.open(f'assets/sprites/buildings/{b}.png').convert('RGBA')
         for b, *_ in BUILD}
+
+# кольцо стен вокруг замка
+WALLS = Image.open('assets/sprites/walls.png').convert('RGBA')
+wall_cells = set()
+WX0, WY0, WX1, WY1 = 12, 17, 25, 30
+for x in range(WX0, WX1 + 1):
+    wall_cells.add((x, WY0)); wall_cells.add((x, WY1))
+for y in range(WY0, WY1 + 1):
+    wall_cells.add((WX0, y)); wall_cells.add((WX1, y))
+for gx in (18, 19):                      # проём под ворота
+    wall_cells.discard((gx, WY1))
+for (wx, wy) in wall_cells:
+    m = 0
+    if (wx, wy - 1) in wall_cells: m |= 1
+    if (wx + 1, wy) in wall_cells: m |= 2
+    if (wx, wy + 1) in wall_cells: m |= 4
+    if (wx - 1, wy) in wall_cells: m |= 8
+    draw_items.append((wy, {'kind': 'wall', 'x': wx + OX, 'y': wy + OY, 'mask': m}))
 for bid, bx, by, bw, bh in BUILD:
     draw_items.append((by + bh - 1, {'kind': 'building', 'id': bid,
                                      'x': bx + OX, 'y': by + OY, 'w': bw, 'h': bh}))
@@ -107,7 +125,10 @@ draw_items.sort(key=lambda p: p[0])
 
 for _, o in draw_items:
     sx, sy = o['x'] - OX, o['y'] - OY
-    if o['kind'] == 'building':
+    if o['kind'] == 'wall':
+        t = WALLS.crop((o['mask'] * 32, 0, (o['mask'] + 1) * 32, 48))
+        img.paste(t, (sx * T, (sy + 1) * T - 48), t)
+    elif o['kind'] == 'building':
         src = BSPR[o['id']]
         w = o['w'] * T
         sc = w / src.width

@@ -56,6 +56,8 @@ export class GameMap {
     this.seed = seed;
     this.tiles = new Uint8Array(w * h);     // id местности
     this.occupied = new Uint8Array(w * h);  // 0 свободно, 1 занято зданием
+    this.walls = new Uint8Array(w * h);     // 0 нет, 1 частокол, 2 камень
+    this.passable = new Uint8Array(w * h);  // клетка занята зданием, но проходима (ворота)
     this.decor = [];
     this.stumps = [];
     this.generate(seed);
@@ -66,11 +68,18 @@ export class GameMap {
   inBounds(x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h; }
   get(x, y) { return this.inBounds(x, y) ? this.tiles[this.idx(x, y)] : TERRAIN.WATER.id; }
 
+  /** Проходима ли сама местность, без учёта построек */
+  walkableTerrain(x, y) {
+    if (!this.inBounds(x, y)) return false;
+    return terrainById(this.tiles[this.idx(x, y)]).walk;
+  }
+
   /** Можно ли пройти по клетке пешком */
   walkable(x, y) {
     if (!this.inBounds(x, y)) return false;
     const i = this.idx(x, y);
-    if (this.occupied[i]) return false;
+    if (this.walls[i]) return false;        // стена перекрывает проход
+    if (this.occupied[i] && !this.passable[i]) return false;
     return terrainById(this.tiles[i]).walk;
   }
 

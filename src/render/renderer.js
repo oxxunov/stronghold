@@ -4,7 +4,8 @@
 import { CONFIG } from '../config.js';
 import { state } from '../core/state.js';
 import { terrainById } from '../world/map.js';
-import { UnitSheet, ObjectSet, BuildingSprites, AnimalSheets, loadImage, TREES, ROCKS, BUSHES } from './sprites.js';
+import { UnitSheet, ObjectSet, BuildingSprites, AnimalSheets, WallSheet, loadImage, TREES, ROCKS, BUSHES } from './sprites.js';
+import { WALL_TYPES, wallMask } from '../world/walls.js';
 import { SPECIES } from '../world/animals.js';
 import { buildMode } from '../ui/buildpanel.js';
 
@@ -27,6 +28,7 @@ export class Renderer {
     this.bushes = new ObjectSet('./assets/craftpix/bushes', BUSHES);
     this.buildings = new BuildingSprites();
     this.animals = new AnimalSheets();
+    this.wallSheet = new WallSheet();
 
     // атлас местности: строка = тип, столбец = вариант
     const atlasRec = loadImage('./assets/sprites/terrain.png');
@@ -178,6 +180,19 @@ export class Renderer {
       if (wx < tl.x - padX || wx > br.x + padX || wy < tl.y - padY || wy > br.y + padY) continue;
       list.push(e);
     }
+    // стены: каждая клетка со стеной — отдельный объект сортировки
+    const wx0 = Math.max(0, Math.floor(tl.x / T) - 1);
+    const wx1 = Math.min(this.map.w - 1, Math.ceil(br.x / T) + 1);
+    const wy0 = Math.max(0, Math.floor(tl.y / T) - 2);
+    const wy1 = Math.min(this.map.h - 1, Math.ceil(br.y / T) + 1);
+    for (let y = wy0; y <= wy1; y++) {
+      for (let x = wx0; x <= wx1; x++) {
+        const t = this.map.walls[this.map.idx(x, y)];
+        if (!t) continue;
+        list.push({ wall: t, x, y, sortY: y });
+      }
+    }
+
     for (const b of state.buildings) {
       const wx = b.x * T, wy = b.sortY * T;
       if (wx < tl.x - padX * 3 || wx > br.x + padX || wy < tl.y - padY * 3 || wy > br.y + padY) continue;
@@ -187,7 +202,11 @@ export class Renderer {
     list.sort((a, b) => (a.sortY !== undefined ? a.sortY : a.y) - (b.sortY !== undefined ? b.sortY : b.y));
 
     for (const o of list) {
-      if (o.def) {
+      if (o.wall) {
+        const p = cam.worldToScreen(o.x * T, (o.y + 1) * T);
+        this.wallSheet.draw(ctx, WALL_TYPES[o.wall].row, wallMask(this.map, o.x, o.y),
+                            p.x, p.y, cam.zoom);
+      } else if (o.def) {
         // здание
         const p = cam.worldToScreen(o.x * T, (o.y + o.h) * T);
         const sprite = o.def.stages ? `${o.def.id}_${o.growth | 0}` : o.def.id;
@@ -237,6 +256,20 @@ export class Renderer {
 
 Renderer.prototype.drawGhost = function () {
   const ctx = this.ctx, cam = this.camera, T = CONFIG.TILE;
+
+  // линия стены
+  if (buildMode.wall) {
+    for (const c of buildMode.tiles) {
+      const ok = this.map.walkableTerrain(c.x, c.y)
+        && !this.map.occupied[this.map.idx(c.x, c.y)]
+        && !this.map.walls[this.map.idx(c.x, c.y)];
+      const p = cam.worldToScreen(c.x * T, c.y * T);
+      ctx.fillStyle = ok ? 'rgba(120,200,110,0.34)' : 'rgba(200,80,70,0.36)';
+      ctx.fillRect(p.x, p.y, T * cam.zoom, T * cam.zoom);
+    }
+    return;
+  }
+
   const def = buildMode.def;
   const [w, h] = def.size;
 

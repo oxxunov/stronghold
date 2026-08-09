@@ -789,14 +789,370 @@ def inn():
     return cv.im
 
 
+IRON_C = (128, 132, 140)
+
+# --------------------------------------------------------------- этап 5.3
+def ironmine():
+    """Железный рудник: копёр над стволом, отвал руды, вагонетка. 3x3."""
+    tw = th = 3
+    W, Hh = tw * T, th * T + 40
+    cv = Canvas(W, Hh)
+    top = Hh - th * T
+    cv.shadow(6, Hh - 5, W - 4, Hh - 1, 65)
+
+    # площадка из щебня
+    for y in range(top, Hh):
+        for x in range(W):
+            c = mix((126, 112, 96), 0.90 + h(x, y, 15) * 0.22)
+            if h(x, y, 16) > 0.96:
+                c = (176, 122, 60)                       # рыжие крупицы руды
+            cv.px(x, y, c)
+
+    # ствол шахты
+    cv.d.ellipse([W // 2 - 13, top + 16, W // 2 + 13, top + 40],
+                 fill=(*(52, 46, 40), 255))
+    cv.d.ellipse([W // 2 - 10, top + 19, W // 2 + 10, top + 36],
+                 fill=(*(26, 22, 18), 255))
+    # обвязка сруба
+    for i in range(4):
+        cv.rect(W // 2 - 14 + i * 8, top + 14, W // 2 - 8 + i * 8, top + 17, mix(WOOD, 0.9))
+
+    # копёр: две ноги и перекладина с блоком
+    cv.rect(W // 2 - 16, top - 34, W // 2 - 13, top + 18, mix(WOOD, 0.94))
+    cv.rect(W // 2 + 13, top - 34, W // 2 + 16, top + 18, mix(WOOD, 0.80))
+    cv.rect(W // 2 - 18, top - 38, W // 2 + 18, top - 34, WOOD)
+    cv.rect(W // 2 - 18, top - 38, W // 2 + 18, top - 37, mix(WOOD, 1.16))
+    for i in range(3):                                    # раскосы
+        cv.rect(W // 2 - 15 + i, top - 20 + i * 6, W // 2 + 15 - i, top - 19 + i * 6,
+                mix(WOOD, 0.74))
+    # трос с бадьёй
+    cv.rect(W // 2 - 1, top - 34, W // 2, top - 6, (76, 68, 56))
+    cv.rect(W // 2 - 5, top - 6, W // 2 + 4, top + 2, mix(IRON_C, 1.0))
+    cv.rect(W // 2 - 5, top - 6, W // 2 + 4, top - 5, mix(IRON_C, 1.25))
+
+    # отвал руды
+    for i in range(9):
+        px = 6 + (i % 3) * 5 + (i // 3) * 2
+        py = Hh - 12 + (i % 3) - (i // 3) * 4
+        cv.rect(px, py, px + 4, py + 3, (150, 104, 58) if i % 2 else (128, 90, 52))
+    cv.outline()
+    return cv.im
+
+
+def pitchrig():
+    """Смоляная вышка: помост над болотом, ворот и бочки со смолой. 2x2."""
+    tw = th = 2
+    W, Hh = tw * T, th * T + 30
+    cv = Canvas(W, Hh)
+    top = Hh - th * T
+
+    # болотная жижа
+    for y in range(top, Hh):
+        for x in range(W):
+            c = mix((74, 84, 62), 0.90 + h(x, y, 21) * 0.2)
+            if h(x, y, 22) > 0.88:
+                c = (52, 62, 58)
+            cv.px(x, y, c)
+
+    # помост
+    for y in range(top + 14, top + 30):
+        for x in range(4, W - 4):
+            c = mix(WOOD, 0.82 + ((x // 4) % 2) * 0.14)
+            cv.px(x, y, c)
+    cv.rect(4, top + 14, W - 5, top + 15, mix(WOOD, 1.14))
+    for lx in (6, W - 10):                                # сваи
+        cv.rect(lx, top + 30, lx + 2, Hh - 4, mix(WOOD, 0.72))
+
+    # ворот с рукоятью
+    cv.rect(W // 2 - 8, top - 2, W // 2 + 7, top + 4, mix(WOOD, 0.9))
+    cv.rect(W // 2 - 10, top, W // 2 - 8, top + 2, mix(IRON_C, 1.0))
+    cv.rect(W // 2 + 7, top, W // 2 + 10, top + 2, mix(IRON_C, 1.0))
+    cv.rect(W // 2 - 1, top + 4, W // 2, top + 14, (70, 62, 52))
+
+    # бочки со смолой
+    _barrel(cv, W - 16, Hh - 18, 9, 12)
+    _barrel(cv, 3, Hh - 15, 8, 10)
+    cv.rect(W - 15, Hh - 18, W - 9, Hh - 17, (38, 34, 30))   # чёрная смола сверху
+    cv.outline()
+    return cv.im
+
+
+def market():
+    """Рынок: навесы на столбах, прилавки, ящики и мешки. 3x3."""
+    tw = th = 3
+    W, Hh = tw * T, th * T + 24
+    cv = Canvas(W, Hh)
+    top = Hh - th * T
+
+    # утоптанная площадка
+    for y in range(top, Hh):
+        for x in range(W):
+            cv.px(x, y, mix((146, 126, 96), 0.92 + h(x, y, 31) * 0.16))
+
+    # два навеса в полоску
+    for (sx, col) in ((2, (186, 78, 66)), (W // 2 + 2, (72, 108, 150))):
+        w = W // 2 - 4
+        for y in range(top + 2, top + 16):
+            for x in range(sx, sx + w):
+                stripe = ((x - sx) // 5) % 2
+                c = col if stripe else (226, 216, 196)
+                k = 1.10 - (y - top - 2) / 22
+                cv.px(x, y, mix(c, k))
+        cv.rect(sx, top + 16, sx + w - 1, top + 17, mix(col, 0.6))
+        for px in (sx + 1, sx + w - 3):                 # столбы
+            cv.rect(px, top + 17, px + 1, top + 34, mix(WOOD, 0.86))
+        # прилавок
+        cv.rect(sx, top + 30, sx + w - 1, top + 34, mix(WOOD, 0.94))
+        cv.rect(sx, top + 30, sx + w - 1, top + 31, mix(WOOD, 1.14))
+
+    # товар: ящики, мешки, корзина
+    cv.rect(6, Hh - 16, 18, Hh - 5, mix(WOOD, 0.9))
+    cv.rect(6, Hh - 16, 18, Hh - 14, mix(WOOD, 1.12))
+    cv.d.line([6, Hh - 11, 18, Hh - 11], fill=(*mix(WOOD, 0.7), 255))
+    for (mx, my) in ((26, Hh - 12), (36, Hh - 10)):     # мешки
+        cv.d.ellipse([mx, my, mx + 10, my + 10], fill=(*(198, 182, 146), 255))
+        cv.rect(mx + 3, my - 2, mx + 6, my + 2, (176, 160, 126))
+    cv.d.ellipse([W - 22, Hh - 14, W - 6, Hh - 4], fill=(*(156, 118, 66), 255))
+    for i in range(5):                                  # яблоки в корзине
+        cv.px(W - 20 + i * 3, Hh - 13 + (i % 2), (188, 62, 52))
+    cv.outline()
+    return cv.im
+
+
+STEEL_C = (168, 172, 182)
+LEATHER = (110, 76, 46)
+
+# ---------------------------------------------------------------- этап 6
+def _props(base, fn):
+    """Обёртка: берём готовый дом и дорисовываем поверх приметы ремесла."""
+    im = base
+    cv = Canvas(im.width, im.height)
+    cv.im = im.copy()
+    cv.d = ImageDraw.Draw(cv.im)
+    fn(cv, im.width, im.height)
+    return cv.im
+
+
+def fletcher():
+    """Лучный мастер: заготовки древков у стены и лук на фасаде. 2x2."""
+    def props(cv, W, Hh):
+        # связка древков
+        for i in range(6):
+            cv.rect(3 + i * 2, Hh - 34, 4 + i * 2, Hh - 8, mix(WOOD, 0.88 + (i % 2) * 0.16))
+        cv.rect(2, Hh - 24, 15, Hh - 22, mix(LEATHER, 1.0))
+        # лук на стене
+        bx = W - 14
+        for i, y in enumerate(range(Hh - 32, Hh - 12)):
+            off = int(3 * math.sin((i / 19) * math.pi))
+            cv.px(bx + off, y, WOOD)
+            cv.px(bx + off + 1, y, mix(WOOD, 0.8))
+        for y in range(Hh - 31, Hh - 13):
+            cv.px(bx, y, (232, 224, 204))
+    return _props(house(2, 2, WOOD, 'wood', THATCH, 'thatch', True, 1, False, 21), props)
+
+
+def poleturner():
+    """Копейщик-токарь: козлы с жердями и точильный станок. 2x2."""
+    def props(cv, W, Hh):
+        for i in range(5):                                # жерди на козлах
+            y = Hh - 30 + i * 3
+            cv.rect(2, y, W - 12, y + 1, mix(WOOD, 0.86 + (i % 2) * 0.2))
+        cv.rect(4, Hh - 32, 5, Hh - 6, mix(WOOD, 0.7))
+        cv.rect(W - 16, Hh - 32, W - 15, Hh - 6, mix(WOOD, 0.7))
+        # наконечники на стойке
+        for i in range(3):
+            px = W - 12 + i * 3
+            cv.rect(px, Hh - 26, px + 1, Hh - 18, STEEL_C)
+            cv.px(px, Hh - 27, mix(STEEL_C, 1.3))
+    return _props(house(2, 2, WOOD, 'wood', THATCH, 'thatch', True, 1, False, 22), props)
+
+
+def blacksmith():
+    """Кузница: горн с искрами, наковальня, готовые клинки. 3x3."""
+    def props(cv, W, Hh):
+        # горн у стены
+        cv.rect(4, Hh - 30, 22, Hh - 6, mix(STONE, 0.9))
+        cv.rect(4, Hh - 30, 22, Hh - 28, mix(STONE, 1.14))
+        cv.rect(9, Hh - 24, 17, Hh - 14, (48, 34, 26))
+        cv.rect(10, Hh - 22, 16, Hh - 16, (216, 108, 40))     # огонь
+        cv.rect(11, Hh - 20, 15, Hh - 18, (248, 196, 96))
+        for i in range(4):                                     # искры
+            cv.px(12 + i * 2, Hh - 26 - (i % 3) * 2, (250, 214, 130))
+        # наковальня
+        cv.rect(W - 26, Hh - 16, W - 14, Hh - 12, mix(IRON_C, 1.0))
+        cv.rect(W - 24, Hh - 12, W - 18, Hh - 6, mix(IRON_C, 0.8))
+        cv.rect(W - 26, Hh - 16, W - 14, Hh - 15, mix(IRON_C, 1.3))
+        # клинки на стойке
+        for i in range(3):
+            px = W - 12 + i * 4
+            cv.rect(px, Hh - 30, px + 1, Hh - 14, (206, 210, 218))
+            cv.rect(px - 1, Hh - 14, px + 2, Hh - 13, mix(WOOD, 0.8))
+    return _props(house(3, 3, STONE, 'stone', TILE_R, 'tile', True, 2, True, 23), props)
+
+
+def armourer():
+    """Оружейник: кираса на стойке и заготовки пластин. 3x3."""
+    def props(cv, W, Hh):
+        cx = 16
+        # кираса
+        cv.rect(cx - 7, Hh - 32, cx + 7, Hh - 14, mix(STEEL_C, 1.0))
+        cv.rect(cx - 7, Hh - 32, cx + 7, Hh - 30, mix(STEEL_C, 1.28))
+        cv.rect(cx - 5, Hh - 30, cx - 4, Hh - 16, mix(STEEL_C, 1.18))
+        cv.rect(cx + 4, Hh - 30, cx + 5, Hh - 16, mix(STEEL_C, 0.78))
+        cv.rect(cx - 1, Hh - 32, cx, Hh - 14, mix(STEEL_C, 0.86))   # ребро
+        cv.rect(cx - 2, Hh - 14, cx + 1, Hh - 6, mix(WOOD, 0.8))    # стойка
+        # пластины стопкой
+        for i in range(4):
+            py = Hh - 12 - i * 3
+            cv.rect(W - 24, py, W - 8, py + 2, mix(STEEL_C, 0.9 + i * 0.06))
+    return _props(house(3, 3, PLASTER, 'plaster', TILE_R, 'tile', True, 2, True, 24), props)
+
+
+def tanner():
+    """Кожевник: шкуры, растянутые на рамах, и чан. 2x2."""
+    def props(cv, W, Hh):
+        for i, px in enumerate((2, 20)):                  # рамы со шкурами
+            cv.rect(px, Hh - 34, px + 1, Hh - 6, mix(WOOD, 0.8))
+            cv.rect(px + 13, Hh - 34, px + 14, Hh - 6, mix(WOOD, 0.8))
+            cv.rect(px, Hh - 34, px + 14, Hh - 33, mix(WOOD, 0.9))
+            for y in range(Hh - 32, Hh - 12):
+                for x in range(px + 2, px + 13):
+                    c = (166, 132, 96) if (x + y) % 5 else (148, 116, 82)
+                    cv.px(x, y, c)
+            cv.rect(px + 2, Hh - 32, px + 12, Hh - 31, (188, 154, 116))
+    return _props(house(2, 2, WOOD, 'wood', THATCH, 'thatch', True, 0, False, 25), props)
+
+
+def armoury():
+    """Арсенал: каменное хранилище со стойками оружия. 3x3."""
+    def props(cv, W, Hh):
+        # стойка с копьями у стены
+        for i in range(5):
+            px = 5 + i * 4
+            cv.rect(px, Hh - 34, px + 1, Hh - 8, mix(WOOD, 0.86))
+            cv.rect(px, Hh - 36, px + 1, Hh - 34, STEEL_C)
+        cv.rect(4, Hh - 20, 26, Hh - 18, mix(WOOD, 0.72))
+        # щиты на стене
+        for i, px in enumerate((W - 30, W - 16)):
+            cv.d.ellipse([px, Hh - 32, px + 12, Hh - 18],
+                         fill=(*(146, 100, 62), 255))
+            cv.d.ellipse([px + 4, Hh - 28, px + 8, Hh - 22],
+                         fill=(*STEEL_C, 255))
+    return _props(house(3, 3, STONE, 'stone', TILE_R, 'tile', True, 1, False, 26), props)
+
+
+# -------------------------------------------------------------- этап 7.2
+def _crenels(cv, x0, x1, ytop, base, step=7, w=3, hgt=7):
+    for mx in range(int(x0), int(x1) + 1, step):
+        cv.rect(mx, ytop - hgt, min(mx + w, x1), ytop - 1, mix(base, 1.06))
+        cv.rect(mx, ytop - hgt, min(mx + w, x1), ytop - hgt + 1, mix(base, 1.28))
+
+
+def gatehouse():
+    """Ворота: две башенки, арка проезда и решётка. 2x2, проход насквозь."""
+    tw, th = 2, 2
+    W, Hh = tw * T, th * T + 46
+    cv = Canvas(W, Hh)
+    top = Hh - th * T
+    cv.shadow(4, Hh - 5, W - 3, Hh - 1, 70)
+
+    body_top = top - 26
+    tex = wall_texture(STONE, 0, body_top, W - 1, Hh, 'stone', 41)
+
+    # боковые башенки
+    for bx0, bx1 in ((0, 15), (W - 16, W - 1)):
+        for y in range(body_top - 8, Hh - 2):
+            for x in range(bx0, bx1 + 1):
+                side = (x - bx0) / max(1, bx1 - bx0)
+                cv.px(x, y, mix(tex(x, y), 1.12 - side * 0.26))
+        _crenels(cv, bx0, bx1, body_top - 8, STONE)
+
+    # перемычка над проездом
+    for y in range(body_top, body_top + 14):
+        for x in range(14, W - 14):
+            cv.px(x, y, tex(x, y))
+    _crenels(cv, 14, W - 15, body_top, STONE, step=7)
+
+    # арка и решётка
+    ax0, ax1 = 16, W - 17
+    cv.d.ellipse([ax0 - 1, body_top + 8, ax1 + 1, body_top + 30],
+                 fill=(*mix(STONE, 0.72), 255))
+    cv.rect(ax0 - 1, body_top + 19, ax1 + 1, Hh - 3, mix(STONE, 0.72))
+    cv.d.ellipse([ax0 + 1, body_top + 10, ax1 - 1, body_top + 30],
+                 fill=(*(38, 32, 26), 255))
+    cv.rect(ax0 + 1, body_top + 20, ax1 - 1, Hh - 4, (38, 32, 26))
+    for x in range(ax0 + 2, ax1, 3):                    # прутья решётки
+        cv.rect(x, body_top + 12, x, Hh - 12, mix(IRON_C, 1.05))
+    for y in range(body_top + 14, Hh - 12, 6):
+        cv.rect(ax0 + 2, y, ax1 - 2, y, mix(IRON_C, 0.9))
+    cv.outline()
+    return cv.im
+
+
+def _tower(tw, size_name, round_top=False, big=False):
+    """Общая заготовка башни: тело, зубцы, бойницы."""
+    W, Hh = tw * T, tw * T + (78 if big else 58)
+    cv = Canvas(W, Hh)
+    cv.shadow(4, Hh - 5, W - 3, Hh - 1, 75)
+    body_top = Hh - tw * T - (30 if big else 22)
+    tex = wall_texture(STONE, 0, body_top, W - 1, Hh, 'stone', 43)
+
+    inset = 3 if round_top else 0
+    for y in range(body_top, Hh - 2):
+        for x in range(inset, W - inset):
+            side = (x - inset) / max(1, W - 1 - inset * 2)
+            cv.px(x, y, mix(tex(x, y), 1.14 - side * 0.30))
+
+    # площадка с зубцами
+    _crenels(cv, inset, W - 1 - inset, body_top, STONE, step=8 if big else 7)
+    cv.d.line([inset, body_top, W - 1 - inset, body_top],
+              fill=(*mix(STONE, 0.62), 255))
+    cv.rect(inset, body_top + 1, W - 1 - inset, body_top + 3, mix(STONE, 1.10))
+
+    # бойницы
+    rows = 2 if big else 1
+    for r in range(rows):
+        wy = body_top + 12 + r * 18
+        for wx in (W // 2 - 8, W // 2 + 6):
+            cv.rect(wx, wy, wx + 2, wy + 9, mix(DARK, 1.05))
+            cv.px(wx, wy, mix(STONE, 0.9))
+
+    # дверь у основания
+    cv.rect(W // 2 - 4, Hh - 16, W // 2 + 3, Hh - 3, mix(WOOD, 0.6))
+    cv.rect(W // 2 - 3, Hh - 15, W // 2 + 2, Hh - 3, WOOD)
+    cv.outline()
+    return cv.im
+
+
+def watchtower():
+    """Сторожевая башня: дёшево, обзор. 2x2."""
+    return _tower(2, 'watch')
+
+
+def roundtower():
+    """Круглая башня: больше гарнизон, +дальность лучникам. 3x3."""
+    return _tower(3, 'round', round_top=True)
+
+
+def squaretower():
+    """Большая квадратная башня: сюда встанут баллиста и мангонель. 3x3."""
+    return _tower(3, 'square', big=True)
+
+
 BUILDINGS = {
     'keep':       ('Донжон',          keep),
     'hovel':      ('Лачуга',          lambda: house(2, 2, PLASTER, 'plaster', THATCH, 'thatch', True, 1, False, 1)),
     'woodcutter': ('Лесопилка',       lambda: house(2, 2, WOOD, 'wood', THATCH, 'thatch', True, 0, False, 2)),
     'quarry':     ('Каменоломня',     quarry),
+    'ironmine':   ('Железный рудник', ironmine),
+    'pitchrig':   ('Смоляная вышка',  pitchrig),
     'wheatfarm':  ('Пшеничная ферма', farm),
     'mill':       ('Мельница',        mill),
     'bakery':     ('Пекарня',         lambda: house(3, 3, PLASTER, 'plaster', TILE_R, 'tile', True, 2, True, 4, storeys=2)),
+    'gatehouse':  ('Ворота',          gatehouse),
+    'watchtower': ('Сторожевая башня', watchtower),
+    'roundtower': ('Круглая башня',   roundtower),
+    'squaretower':('Квадратная башня', squaretower),
     'stockpile':  ('Склад',           stockpile),
     'granary':    ('Амбар',           lambda: house(3, 3, WOOD, 'wood', THATCH, 'thatch', True, 1, False, 5)),
     'hunter':     ('Охотничий домик', hunter),
@@ -805,12 +1161,19 @@ BUILDINGS = {
     'inn':        ('Таверна',         inn),
     'dairy':      ('Молочная ферма', dairy),
     'orchard':    ('Яблоневый сад',  orchard),
+    'market':     ('Рынок',           market),
     'garden':     ('Сад',             garden),
     'statue':     ('Статуя',          statue),
     'fountain':   ('Фонтан',          fountain),
     'stocks':     ('Позорный столб',  stocks),
     'cage':       ('Клетка',          cage),
     'gallows':    ('Виселица',        gallows),
+    'fletcher':   ('Лучный мастер',   fletcher),
+    'poleturner': ('Копейщик-токарь', poleturner),
+    'blacksmith': ('Кузница',         blacksmith),
+    'armourer':   ('Оружейник',       armourer),
+    'tanner':     ('Кожевник',        tanner),
+    'armoury':    ('Арсенал',         armoury),
     'barracks':   ('Казарма',         lambda: house(4, 3, STONE, 'stone', TILE_R, 'tile', True, 3, False, 7, storeys=2)),
 }
 

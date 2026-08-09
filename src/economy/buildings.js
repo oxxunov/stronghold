@@ -56,6 +56,7 @@ export function checkPlace(map, def, tx, ty) {
       if (!map.inBounds(x, y)) return { ok: false, reason: 'За краем карты' };
       const i = map.idx(x, y);
       if (map.occupied[i]) return { ok: false, reason: 'Место занято' };
+      if (map.walls[i] && !def.passable) return { ok: false, reason: 'Здесь стена' };
       if (allowed.length && !allowed.includes(map.tiles[i]))
         return { ok: false, reason: `Нужна местность: ${def.terrain.join(', ')}` };
     }
@@ -80,6 +81,11 @@ export function checkPlace(map, def, tx, ty) {
   // и не должна отрезать часть замка от донжона
   const cut = cutsOff(map, tx, ty, w, h);
   if (cut) return { ok: false, reason: `Отрежет путь: ${cut.def.name}` };
+
+  if (def.needsBuilding && !state.buildings.some((b) => b.def.id === def.needsBuilding)) {
+    const need = DEFS[def.needsBuilding]?.name || def.needsBuilding;
+    return { ok: false, reason: `Сначала нужна: ${need}` };
+  }
 
   if (!canAfford(def)) return { ok: false, reason: 'Не хватает ресурсов' };
 
@@ -204,8 +210,13 @@ export function place(map, def, tx, ty) {
 
   const [w, h] = def.size;
   for (let y = ty; y < ty + h; y++)
-    for (let x = tx; x < tx + w; x++)
-      map.occupied[map.idx(x, y)] = 1;
+    for (let x = tx; x < tx + w; x++) {
+      const i = map.idx(x, y);
+      if (def.passable) map.walls[i] = 0;   // ворота встают в разрыв стены
+      map.occupied[i] = 1;
+      // ворота заняты для застройки, но люди сквозь них ходят
+      map.passable[i] = def.passable ? 1 : 0;
+    }
 
   for (const [res, amount] of Object.entries(def.cost || {}))
     state.resources[res] -= amount;
@@ -228,8 +239,11 @@ export function place(map, def, tx, ty) {
 
 export function demolish(map, b) {
   for (let y = b.y; y < b.y + b.h; y++)
-    for (let x = b.x; x < b.x + b.w; x++)
-      map.occupied[map.idx(x, y)] = 0;
+    for (let x = b.x; x < b.x + b.w; x++) {
+      const i = map.idx(x, y);
+      map.occupied[i] = 0;
+      map.passable[i] = 0;
+    }
   const i = state.buildings.indexOf(b);
   if (i >= 0) state.buildings.splice(i, 1);
   events.emit('demolished', b);

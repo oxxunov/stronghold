@@ -11,7 +11,8 @@ import { updateWalkers } from './world/walker.js';
 import { Renderer } from './render/renderer.js';
 import { initHud, updateHud } from './ui/hud.js';
 import { loadBuildings, place, checkPlace, DEFS } from './economy/buildings.js';
-import { initBuildPanel, tapMap, buildMode } from './ui/buildpanel.js';
+import { initBuildPanel, tapMap, buildMode, wallDrag } from './ui/buildpanel.js';
+import { initMarketPanel, refreshMarket } from './ui/marketpanel.js';
 import { assignJobs, updateWorkers, regrowForest, growFields } from './economy/workers.js';
 import { populationDay, updateIdlers, housingCap } from './society/population.js';
 import { feedPeople } from './society/food.js';
@@ -30,8 +31,18 @@ const renderer = new Renderer(canvas, camera, map);
 initHud(camera, map);
 camera.center();
 
-// --- Тап по карте: во время стройки переносит призрак ---
+// в режиме стены один палец чертит линию, а не двигает карту
+camera.lockDrag = () => buildMode.active && !!buildMode.wall;
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (buildMode.wall) wallDrag('start', e.clientX, e.clientY);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (buildMode.wall && e.buttons !== 0) wallDrag('move', e.clientX, e.clientY);
+  else if (buildMode.wall && e.pressure > 0) wallDrag('move', e.clientX, e.clientY);
+});
 canvas.addEventListener('pointerup', (e) => {
+  if (buildMode.wall) { wallDrag('move', e.clientX, e.clientY); return; }
   if (camera.moved) return;              // это было перетаскивание карты, не тап
   if (buildMode.active) tapMap(e.clientX, e.clientY);
 });
@@ -39,6 +50,7 @@ canvas.addEventListener('pointerup', (e) => {
 // --- Загрузка данных, потом старт ---
 loadBuildings().then(() => {
   initBuildPanel(map, camera);
+  initMarketPanel();
 
   // донжон в центре — точка отсчёта для игрока, склад на ближайшем годном месте
   const cx = (map.w >> 1) - 2, cy = (map.h >> 1) - 2;

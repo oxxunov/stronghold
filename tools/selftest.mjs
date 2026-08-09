@@ -331,6 +331,186 @@ section('6. Склады и маршрутизация ресурсов');
   ok(!St.take('wood', 1e9), 'со склада удалось взять больше, чем есть');
 }
 
+// ======================================================= 6.5 Рынок
+section('6.5. Рынок');
+{
+  const map = resetState();
+  const M = await load('src/economy/market.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+
+  ok(!M.hasMarket(), 'рынок числится без постройки');
+  ok(!M.buy('wood', 1).ok, 'покупка проходит без рынка');
+
+  buildTown(map, ['stockpile', 'granary', 'market']);
+  ok(M.hasMarket(), 'рынок не найден после постройки');
+  ok(M.buyPrice('iron') > M.sellPrice('iron'), 'покупка не дороже продажи');
+
+  const gold0 = state.resources.gold;
+  const wood0 = state.resources.wood;
+  const r = M.buy('wood', 10);
+  ok(r.ok, 'не удалось купить дерево: ' + (r.reason || ''));
+  ok(state.resources.wood === wood0 + 10, 'товар не пришёл на склад');
+  ok(state.resources.gold === gold0 - M.buyPrice('wood') * 10, 'золото списано неверно');
+
+  const g1 = state.resources.gold;
+  ok(M.sell('wood', 10).ok, 'не удалось продать дерево');
+  ok(state.resources.gold === g1 + M.sellPrice('wood') * 10, 'выручка начислена неверно');
+  ok(state.resources.wood === wood0, 'товар не списан со склада');
+
+  ok(!M.sell('iron', 999).ok, 'продано больше, чем есть');
+  state.resources.gold = 0;
+  ok(!M.buy('iron', 10).ok, 'покупка без золота прошла');
+
+  // круг «купил-продал» обязан быть убыточным, иначе бесконечные деньги
+  state.resources.gold = 1000;
+  const before = state.resources.gold;
+  M.buy('wheat', 20); M.sell('wheat', 20);
+  ok(state.resources.gold < before, 'спред не работает: торговля по кругу приносит прибыль');
+}
+
+// ======================================================= 6.7 Оружие
+section('6.7. Оружейное производство');
+{
+  const map = resetState(555);
+  const M = await load('src/economy/market.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+
+  ok(St.storeFor('sword') === null, 'меч принимается без арсенала');
+  buildTown(map, ['stockpile', 'granary', 'armoury', 'market',
+                  'hovel', 'hovel', 'hovel', 'hovel',
+                  'poleturner', 'fletcher', 'blacksmith']);
+  ok(St.storeFor('sword')?.def.id === 'armoury', 'меч не идёт в арсенал');
+  ok(St.storeFor('bow')?.def.id === 'armoury', 'лук не идёт в арсенал');
+
+  // кожевник требует молочную ферму
+  const tSpot = spot(map, B.DEFS.tanner, map.w >> 1, map.h >> 1);
+  ok(tSpot === null, 'кожевник встал без молочной фермы');
+  buildTown(map, ['dairy']);
+  ok(spot(map, B.DEFS.tanner, map.w >> 1, map.h >> 1) !== null,
+     'кожевник не встаёт даже с молочной фермой');
+
+  state.resources.wood = 400;
+  state.resources.iron = 200;
+  for (let d = 0; d < CONFIG.DAYS_PER_MONTH * 8; d++) simDay(map);
+
+  const made = state.resources.spear + state.resources.bow + state.resources.sword;
+  ok(made > 0, 'за 8 месяцев не сделано ни одного оружия');
+  ok(state.resources.iron < 200, 'кузница не тратит железо');
+
+  // оружие продаётся дороже сырья — на этом строится мирная стратегия
+  ok(M.sellPrice('sword') > M.buyPrice('iron'), 'меч дешевле железа, кузница бессмысленна');
+  console.log(`  сделано: копий ${state.resources.spear}, луков ${state.resources.bow},`
+    + ` мечей ${state.resources.sword}`);
+}
+
+// ======================================================= 6.8 Стены
+section('6.8. Стены');
+{
+  const map = resetState(909);
+  const Wl = await load('src/world/walls.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  state.resources.stone = 1000;
+  state.resources.wood = 1000;
+
+  // линия строится по прямой с одним изломом
+  const line = Wl.lineTiles(10, 10, 16, 13);
+  ok(line.length === 10, `в линии ${line.length} клеток вместо 10`);
+  ok(line[0].x === 10 && line[0].y === 10, 'линия не начинается в точке старта');
+  ok(line[line.length - 1].x === 16 && line[line.length - 1].y === 13,
+     'линия не заканчивается в точке конца');
+
+  // ставим кольцо стен и проверяем, что оно перекрывает проход
+  const ring = [];
+  const cx = 20, cy = 20;
+  for (let x = cx; x <= cx + 5; x++) { ring.push({ x, y: cy }); ring.push({ x, y: cy + 5 }); }
+  for (let y = cy; y <= cy + 5; y++) { ring.push({ x: cx, y }); ring.push({ x: cx + 5, y }); }
+  const placed = Wl.placeWalls(map, Wl.WALL_STONE, ring);
+  ok(placed > 0, 'не встала ни одна стена');
+
+  const inside = { x: cx + 2, y: cy + 2 };
+  const outside = { x: cx - 4, y: cy - 4 };
+  if (map.walkable(inside.x, inside.y) && map.walkable(outside.x, outside.y)) {
+    const p = PF.findPath(map, outside.x, outside.y, inside.x, inside.y);
+    ok(p === null, 'сплошное кольцо стен не перекрыло проход');
+  }
+
+  ok(!map.walkable(cx, cy), 'по стене можно пройти');
+  ok(Wl.wallMask(map, cx + 2, cy) === (2 | 8), 'маска стыковки посчитана неверно');
+
+  const stone0 = state.resources.stone;
+  Wl.placeWalls(map, Wl.WALL_STONE, [{ x: cx + 2, y: cy }]);
+  ok(state.resources.stone === stone0, 'повторная стена на занятой клетке списала камень');
+
+  // не хватает материала — ставим сколько можем и не уходим в минус
+  state.resources.stone = 12;
+  const many = [];
+  for (let x = 30; x < 40; x++) many.push({ x, y: 30 });
+  const n = Wl.placeWalls(map, Wl.WALL_STONE, many);
+  ok(n === 2, `при камне 12 поставлено ${n} клеток вместо 2`);
+  ok(state.resources.stone === 0, 'камень ушёл в минус или остался лишний');
+
+  ok(Wl.removeWall(map, cx, cy), 'стена не сносится');
+  ok(map.walkable(cx, cy), 'после сноса стены клетка не освободилась');
+}
+
+// ======================================================= 6.9 Ворота и башни
+section('6.9. Ворота и башни');
+{
+  const map = resetState(1212);
+  const Wl = await load('src/world/walls.js');
+  B.place(map, B.DEFS.keep, (map.w >> 1) - 2, (map.h >> 1) - 2);
+  state.resources.stone = 2000;
+  state.resources.wood = 2000;
+
+  // стена поперёк, в ней ворота — проход должен восстановиться
+  const cy = 12;
+  const wallLine = [];
+  for (let x = 4; x < map.w - 4; x++) wallLine.push({ x, y: cy });
+  Wl.placeWalls(map, Wl.WALL_STONE, wallLine);
+
+  const above = { x: 24, y: cy - 3 };
+  const below = { x: 24, y: cy + 3 };
+  let blocked = null;
+  if (map.walkable(above.x, above.y) && map.walkable(below.x, below.y)) {
+    blocked = PF.findPath(map, above.x, above.y, below.x, below.y);
+    ok(blocked === null, 'стена поперёк карты не перекрыла проход');
+  }
+
+  const gate = B.DEFS.gatehouse;
+  // ищем вдоль стены место, где местность под воротами годится
+  let gx = 0, gy = cy, reason = '';
+  for (let x = 6; x < map.w - 6; x++) {
+    const c = B.checkPlace(map, gate, x, cy - 1);
+    if (c.ok) { gx = x; break; }
+    reason = c.reason;
+  }
+  ok(gx > 0, 'ворота не встают нигде вдоль стены: ' + reason);
+  if (gx > 0) {
+    B.place(map, gate, gx, gy - 1);
+
+    ok(map.walkable(gx, gy), 'через ворота нельзя пройти');
+    ok(map.walls[map.idx(gx, gy)] === 0, 'стена под воротами не убрана');
+    if (blocked === null && map.walkable(above.x, above.y) && map.walkable(below.x, below.y)) {
+      const p = PF.findPath(map, above.x, above.y, below.x, below.y);
+      ok(p !== null, 'ворота не восстановили проход сквозь стену');
+    }
+
+    // на клетках ворот нельзя строить другое здание
+    ok(!B.checkPlace(map, B.DEFS.hovel, gx, gy).ok, 'на воротах можно строить');
+
+  // башни: обычные здания, сквозь них не ходят
+  const tSpot = spot(map, B.DEFS.roundtower, map.w >> 1, (map.h >> 1) + 6, 12);
+  ok(tSpot !== null, 'круглая башня никуда не встаёт');
+  if (tSpot) {
+    B.place(map, B.DEFS.roundtower, tSpot.x, tSpot.y);
+    ok(!map.walkable(tSpot.x, tSpot.y), 'сквозь башню можно пройти');
+  }
+  }
+
+  ok(B.DEFS.squaretower.garrison > B.DEFS.watchtower.garrison,
+     'большая башня вмещает не больше маленькой');
+}
+
 // ======================================================= 7. Данные
 section('7. Данные зданий');
 {
@@ -343,11 +523,13 @@ section('7. Данные зданий');
        `${id}: нет спрайта ${sprite}.png`);
     if (d.input) {
       const res = Object.keys(d.input)[0];
-      ok(St.RAW.includes(res) || St.FOOD.includes(res), `${id}: сырьё ${res} нигде не хранится`);
+      ok(St.RAW.includes(res) || St.FOOD.includes(res) || St.WEAPONS.includes(res),
+         `${id}: сырьё ${res} нигде не хранится`);
     }
     if (d.output) {
       const res = Object.keys(d.output)[0];
-      ok(St.RAW.includes(res) || St.FOOD.includes(res), `${id}: продукт ${res} некуда класть`);
+      ok(St.RAW.includes(res) || St.FOOD.includes(res) || St.WEAPONS.includes(res),
+         `${id}: продукт ${res} некуда класть`);
     }
   }
 }

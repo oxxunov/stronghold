@@ -25,6 +25,9 @@ const JOB_BY_BUILDING = {
   hunter: 'hunt',
   mill: 'craft', bakery: 'craft', dairy: 'craft',
   brewery: 'craft', inn: 'craft',
+  ironmine: 'craft', pitchrig: 'craft',    // добывают на своём участке, сырьё не нужно
+  fletcher: 'craft', poleturner: 'craft', blacksmith: 'craft',
+  armourer: 'craft', tanner: 'craft',
 };
 
 // ------------------------------------------------------------- навигация

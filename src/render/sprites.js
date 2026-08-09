@@ -141,3 +141,23 @@ export class AnimalSheets {
                   Math.round(size), Math.round(size));
   }
 }
+
+
+/** Атлас стен: строка — материал, столбец — маска соседей (N=1 E=2 S=4 W=8) */
+export class WallSheet {
+  constructor(src = './assets/sprites/walls.png') {
+    const rec = loadImage(src);
+    this.img = rec.img;
+    this.tile = 32;
+    this.height = 48;
+  }
+
+  draw(ctx, row, mask, screenX, footY, zoom) {
+    if (!this.img.complete || !this.img.naturalWidth) return;
+    const sw = this.tile, sh = this.height;
+    const w = sw * zoom, hh = sh * zoom;
+    ctx.drawImage(this.img, mask * sw, row * sh, sw, sh,
+                  Math.round(screenX), Math.round(footY - hh),
+                  Math.round(w), Math.round(hh));
+  }
+}

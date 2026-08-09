@@ -6,10 +6,14 @@ import { events } from '../core/events.js';
 
 export const RAW = ['wood', 'stone', 'iron', 'pitch', 'wheat', 'flour', 'hops', 'ale'];
 export const FOOD = ['bread', 'meat', 'cheese', 'apples'];
+export const WEAPONS = ['bow', 'crossbow', 'spear', 'pike', 'sword', 'mace',
+                        'leatherarmour', 'metalarmour'];
 
 /** Куда нести этот ресурс */
 export function storeFor(res) {
-  const id = RAW.includes(res) ? 'stockpile' : (FOOD.includes(res) ? 'granary' : null);
+  const id = RAW.includes(res) ? 'stockpile'
+           : (FOOD.includes(res) ? 'granary'
+           : (WEAPONS.includes(res) ? 'armoury' : null));
   if (!id) return null;
   return state.buildings.find((b) => b.def.id === id) || null;
 }

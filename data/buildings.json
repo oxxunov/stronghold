@@ -436,5 +436,277 @@
     ],
     "serves": true,
     "desc": "Поит народ. Одна таверна на 20 человек."
+  },
+  "ironmine": {
+    "name": "Железный рудник",
+    "category": "industry",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 30
+    },
+    "workers": 2,
+    "output": {
+      "iron": 1
+    },
+    "cycle": 40,
+    "terrain": [
+      "ore"
+    ],
+    "desc": "Железо для оружия и брони. Только на жиле."
+  },
+  "pitchrig": {
+    "name": "Смоляная вышка",
+    "category": "industry",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 20
+    },
+    "workers": 1,
+    "output": {
+      "pitch": 1
+    },
+    "cycle": 36,
+    "terrain": [
+      "marsh"
+    ],
+    "desc": "Смола для рвов. Только на болоте."
+  },
+  "market": {
+    "name": "Рынок",
+    "category": "town",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 20,
+      "gold": 20
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Купля-продажа. Покупаешь дороже, продаёшь дешевле."
+  },
+  "armoury": {
+    "name": "Арсенал",
+    "category": "military",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 15,
+      "stone": 10
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Хранит оружие и доспехи для найма войск."
+  },
+  "fletcher": {
+    "name": "Лучный мастер",
+    "category": "military",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 10
+    },
+    "workers": 1,
+    "input": {
+      "wood": 1
+    },
+    "output": {
+      "bow": 1
+    },
+    "cycle": 20,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Луки из дерева."
+  },
+  "poleturner": {
+    "name": "Копейщик-токарь",
+    "category": "military",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 10
+    },
+    "workers": 1,
+    "input": {
+      "wood": 1
+    },
+    "output": {
+      "spear": 1
+    },
+    "cycle": 16,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Копья из дерева. Дёшево и быстро."
+  },
+  "blacksmith": {
+    "name": "Кузница",
+    "category": "military",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 20,
+      "stone": 10
+    },
+    "workers": 2,
+    "input": {
+      "iron": 1
+    },
+    "output": {
+      "sword": 1
+    },
+    "cycle": 28,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Мечи из железа."
+  },
+  "armourer": {
+    "name": "Оружейник",
+    "category": "military",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "wood": 20,
+      "stone": 10
+    },
+    "workers": 1,
+    "input": {
+      "iron": 1
+    },
+    "output": {
+      "metalarmour": 1
+    },
+    "cycle": 30,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "desc": "Металлические доспехи."
+  },
+  "tanner": {
+    "name": "Кожевник",
+    "category": "military",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "wood": 12
+    },
+    "workers": 1,
+    "output": {
+      "leatherarmour": 1
+    },
+    "cycle": 30,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "needsBuilding": "dairy",
+    "desc": "Кожаные доспехи из коровьих шкур. Нужна молочная ферма."
+  },
+  "gatehouse": {
+    "name": "Ворота",
+    "category": "castle",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "stone": 20
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "passable": true,
+    "desc": "Проход сквозь стену. Свои проходят, чужие ломают."
+  },
+  "watchtower": {
+    "name": "Сторожевая башня",
+    "category": "castle",
+    "size": [
+      2,
+      2
+    ],
+    "cost": {
+      "stone": 15
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "garrison": 4,
+    "rangeBonus": 2,
+    "desc": "Дёшево, обзор. Место для 4 стрелков."
+  },
+  "roundtower": {
+    "name": "Круглая башня",
+    "category": "castle",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "stone": 30
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "garrison": 8,
+    "rangeBonus": 3,
+    "desc": "Больше гарнизон и дальность стрельбы."
+  },
+  "squaretower": {
+    "name": "Квадратная башня",
+    "category": "castle",
+    "size": [
+      3,
+      3
+    ],
+    "cost": {
+      "stone": 35
+    },
+    "workers": 0,
+    "terrain": [
+      "grass",
+      "dirt"
+    ],
+    "garrison": 10,
+    "rangeBonus": 3,
+    "engines": true,
+    "desc": "Сюда встанут баллиста и мангонель."
   }
 }

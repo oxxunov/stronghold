@@ -11,6 +11,7 @@ import { totalPeople, housingCap } from '../society/population.js';
 import { foodStock, daysOfFood, cycleRation, rationById } from '../society/food.js';
 import { cycleTax, taxById, popularityFactors, fearFactor, workRate } from '../society/popularity.js';
 import { aleInInns } from '../society/ale.js';
+import { refreshMarket } from './marketpanel.js';
 
 const $ = (id) => document.getElementById(id);
 let cam = null;
@@ -125,6 +126,7 @@ export function updateHud(dtReal) {
   $('s-month').textContent = MONTHS[state.month];
 
   refreshAffordable();
+  refreshMarket();
 
   acc = 0; pathAcc = 0;
 }
